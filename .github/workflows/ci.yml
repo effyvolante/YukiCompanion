@@ -13,7 +13,7 @@ jobs:
           swift-version: "5.9"
       # Keep the known-good macOS implementation on its Swift 5 language-mode
       # compatibility boundary even when the runner ships a Swift 6 frontend.
-      - run: swift test -Xswiftc -swift-version -Xswiftc 5 --scratch-path "$RUNNER_TEMP/yuki-build"
+      - run: swift test -Xswiftc -swift-version -Xswiftc 5 -Xswiftc -Xfrontend -Xswiftc -strict-concurrency=minimal --scratch-path "$RUNNER_TEMP/yuki-build"
   windows:
     runs-on: windows-2022
     steps:
