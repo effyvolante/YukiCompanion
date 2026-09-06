@@ -29,5 +29,5 @@ public partial class CompanionWindow : Window
         Transcript.Text += $"\nYou: {text}";
         try { await bridge.SendAsync(text); } catch (Exception error) { Transcript.Text += $"\nError: {error.Message}"; }
     }
-    private void OpenSettings(object sender, RoutedEventArgs e) => MessageBox.Show("Settings and setup will use your saved companion configuration.", configuration.CompanionDisplayName);
+    private void OpenSettings(object sender, RoutedEventArgs e) => System.Windows.MessageBox.Show("Settings and setup will use your saved companion configuration.", configuration.CompanionDisplayName);
 }
