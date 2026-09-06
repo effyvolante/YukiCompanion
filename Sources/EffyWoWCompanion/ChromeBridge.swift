@@ -38,13 +38,14 @@ final class ChromeBridge {
         start()
         let id = UUID().uuidString
         return try await withCheckedThrowingContinuation { continuation in
-            pending[id] = Pending(onSubmitted: onSubmitted, onReply: onReplyDetected, continuation: continuation)
-            var command = ["type": "send_message", "id": id, "text": text]
-            if let imageData { contexts[id] = imageData; command["contextID"] = id }
-            commands.append(command)
             Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.pending[id] = Pending(onSubmitted: onSubmitted, onReply: onReplyDetected, continuation: continuation)
+                var command = ["type": "send_message", "id": id, "text": text]
+                if let imageData { self.contexts[id] = imageData; command["contextID"] = id }
+                self.commands.append(command)
                 try? await Task.sleep(for: .seconds(120))
-                guard let self, let item = self.pending.removeValue(forKey: id) else { return }
+                guard let item = self.pending.removeValue(forKey: id) else { return }
                 self.contexts.removeValue(forKey: id)
                 item.continuation.resume(throwing: ChromeBridgeError.message("Yuki’s Chrome bridge did not return a response."))
             }
