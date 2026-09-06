@@ -1,5 +1,8 @@
 name: Cross-platform validation
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 jobs:
   macos:
     runs-on: macos-14
@@ -16,13 +19,23 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - run: dotnet build Windows/YukiCompanion.Windows.csproj --configuration Release
-      - run: dotnet test Windows.Tests/Windows.Tests.csproj --configuration Release
+      - name: Restore Windows projects
+        run: dotnet restore Windows/YukiCompanion.Windows.csproj && dotnet restore Windows.Tests/Windows.Tests.csproj
+      - name: Build Windows app
+        run: dotnet build Windows/YukiCompanion.Windows.csproj --configuration Release --no-restore
+      - name: Build Windows bridge tests
+        run: dotnet build Windows.Tests/Windows.Tests.csproj --configuration Release --no-restore
+      - name: Run Windows bridge tests
+        run: dotnet test Windows.Tests/Windows.Tests.csproj --configuration Release --no-build --no-restore --logger "console;verbosity=normal"
   integrity:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: node --check ChromeExtension/background.js
-      - run: node --check ChromeExtension/content.js
-      - run: node --check ChromeExtension/popup.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate extension JavaScript
+        run: node --check ChromeExtension/background.js && node --check ChromeExtension/content.js && node --check ChromeExtension/popup.js
+      - name: Validate extension manifest and product assets
+        run: python3 -c "import json; json.load(open('ChromeExtension/manifest.json')); json.load(open('Shared/Configuration/companion.schema.json')); json.load(open('PetAssets/Production/animations.json'))"
       - run: test -f ChromeExtension/manifest.json && test -f PetAssets/Production/animations.json && test -f Shared/Configuration/companion.schema.json
