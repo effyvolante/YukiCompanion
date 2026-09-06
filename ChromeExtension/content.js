@@ -19,9 +19,10 @@ function setExactText(element, text) {
   element.dispatchEvent(new Event("change", { bubbles: true }));
   return composerText(element).trim() === text.trim();
 }
-async function attachContextImage(contextID) {
+async function attachContextImage(contextID, commandToken) {
   if (!contextID) return true;
-  const response = await fetch(`http://127.0.0.1:39173/context/${encodeURIComponent(contextID)}`, { cache: "no-store" });
+  const headers = {}; if (commandToken) headers["X-Yuki-Bridge-Token"] = commandToken;
+  const response = await fetch(`http://127.0.0.1:39173/context/${encodeURIComponent(contextID)}`, { cache: "no-store", headers });
   if (!response.ok) return false;
   const blob = await response.blob();
   let input = [...document.querySelectorAll('input[type="file"]')].find(e => !e.disabled);
@@ -137,7 +138,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== "send_message") return;
   const baseline = assistantTurns();
   (async () => {
-    if (!(await attachContextImage(message.contextID))) { sendResponse({ type: "error", message: "Yuki captured WoW, but ChatGPT wouldn’t accept the image attachment." }); return; }
+    if (!(await attachContextImage(message.contextID, message.token))) { sendResponse({ type: "error", message: "Yuki captured WoW, but ChatGPT wouldn’t accept the image attachment." }); return; }
     const target = composer();
     if (!target || !setExactText(target, message.text)) { sendResponse({ type: "error", message: "I couldn’t find ChatGPT’s message box." }); return; }
     return submitComposer(target, Boolean(message.contextID));

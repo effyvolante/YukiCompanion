@@ -9,6 +9,7 @@ final class ChromeBridge {
     private var commands: [[String: String]] = []
     private var contexts: [String: Data] = [:]
     private var pending: [String: Pending] = [:]
+    private let sessionToken = UUID().uuidString.replacingOccurrences(of: "-", with: "")
 
     private struct Pending {
         let onSubmitted: @MainActor () -> Void
@@ -20,6 +21,7 @@ final class ChromeBridge {
         guard listener == nil else { return }
         do {
             let listener = try NWListener(using: .tcp, on: port)
+            listener.parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: port)
             listener.stateUpdateHandler = { state in
                 if case .failed(let error) = state { NSLog("[YukiChrome] listener failed: %@", error.localizedDescription) }
             }
@@ -41,7 +43,7 @@ final class ChromeBridge {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.pending[id] = Pending(onSubmitted: onSubmitted, onReply: onReplyDetected, continuation: continuation)
-                var command = ["type": "send_message", "id": id, "text": text]
+                var command = ["type": "send_message", "id": id, "text": text, "token": self.sessionToken]
                 if let imageData { self.contexts[id] = imageData; command["contextID"] = id }
                 self.commands.append(command)
                 try? await Task.sleep(for: .seconds(120))
@@ -66,7 +68,7 @@ final class ChromeBridge {
         }
     }
 
-    private func parseRequest(_ data: Data) -> (method: String, path: String, body: Data)? {
+    private func parseRequest(_ data: Data) -> (method: String, path: String, body: Data, token: String?)? {
         guard let separator = data.range(of: Data([13, 10, 13, 10])) else { return nil }
         let headerData = data[..<separator.lowerBound]
         guard let headers = String(data: headerData, encoding: .utf8) else { return nil }
@@ -77,11 +79,15 @@ final class ChromeBridge {
         let length = lines.dropFirst().first { $0.lowercased().hasPrefix("content-length:") }.flatMap { Int($0.split(separator: ":", maxSplits: 1).last?.trimmingCharacters(in: .whitespaces) ?? "0") } ?? 0
         let bodyStart = separator.upperBound
         guard data.count >= bodyStart + length else { return nil }
-        return (String(parts[0]), String(parts[1]), data[bodyStart..<bodyStart + length])
+        let token = lines.dropFirst().first { $0.lowercased().hasPrefix("x-yuki-bridge-token:") }.map { String($0.split(separator: ":", maxSplits: 1).last?.trimmingCharacters(in: .whitespaces) ?? "" ) }
+        return (String(parts[0]), String(parts[1]), data[bodyStart..<bodyStart + length], token)
     }
 
-    private func respond(to connection: NWConnection, request: (method: String, path: String, body: Data)) {
+    private func respond(to connection: NWConnection, request: (method: String, path: String, body: Data, token: String?)) {
         if request.method == "OPTIONS" { write(connection, status: "204 No Content", body: Data()); return }
+        if request.method == "GET" && request.path == "/session" { writeJSON(connection, ["token": sessionToken]); return }
+        let protected = request.path == "/commands" || request.path == "/events" || request.path.hasPrefix("/context/")
+        guard !protected || request.token == sessionToken else { writeJSON(connection, ["error": "unauthorized"], status: "401 Unauthorized"); return }
         if request.method == "GET" && request.path == "/commands" {
             let command = commands.isEmpty ? ["type": "idle"] : commands.removeFirst()
             writeJSON(connection, command); return
@@ -114,13 +120,13 @@ final class ChromeBridge {
         }
     }
 
-    private func writeJSON(_ connection: NWConnection, _ object: [String: Any]) {
+    private func writeJSON(_ connection: NWConnection, _ object: [String: Any], status: String = "200 OK") {
         let data = (try? JSONSerialization.data(withJSONObject: object)) ?? Data("{}".utf8)
-        write(connection, status: "200 OK", body: data, contentType: "application/json")
+        write(connection, status: status, body: data, contentType: "application/json")
     }
 
     private func write(_ connection: NWConnection, status: String, body: Data, contentType: String = "text/plain") {
-        let header = "HTTP/1.1 \(status)\r\nContent-Type: \(contentType)\r\nContent-Length: \(body.count)\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: content-type\r\nConnection: close\r\n\r\n"
+        let header = "HTTP/1.1 \(status)\r\nContent-Type: \(contentType)\r\nContent-Length: \(body.count)\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: content-type, x-yuki-bridge-token\r\nConnection: close\r\n\r\n"
         connection.send(content: Data(header.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
     }
 }
