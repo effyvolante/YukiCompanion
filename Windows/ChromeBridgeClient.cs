@@ -8,6 +8,7 @@ namespace YukiCompanion.Windows;
 
 public sealed class ChromeBridgeClient : IDisposable
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     private readonly HttpListener listener = new();
     private readonly Queue<object> commands = new();
     private readonly Dictionary<string, TaskCompletionSource<BridgeEvent>> pending = new();
@@ -44,7 +45,7 @@ public sealed class ChromeBridgeClient : IDisposable
         else if (context.Request.HttpMethod == "GET" && context.Request.Url?.AbsolutePath == "/commands" && Authorized(context)) { lock (gate) result = commands.Count > 0 ? commands.Dequeue() : new { type = "idle" }; }
         else if (context.Request.HttpMethod == "POST" && context.Request.Url?.AbsolutePath == "/events" && Authorized(context))
         {
-            using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8); var value = JsonSerializer.Deserialize<BridgeEvent>(await reader.ReadToEndAsync());
+            using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8); var value = JsonSerializer.Deserialize<BridgeEvent>(await reader.ReadToEndAsync(), JsonOptions);
             if (value?.Id is not null && value.Type is ("response_complete" or "error")) lock (gate) { if (pending.TryGetValue(value.Id, out var waiter)) waiter.TrySetResult(value); }
             result = new { ok = true };
         }

@@ -21,7 +21,7 @@ public sealed class ChromeBridgeClientTests
         using var commandRequest = new HttpRequestMessage(HttpMethod.Get, "/commands");
         commandRequest.Headers.Add("X-Yuki-Bridge-Token", bridge.SessionToken);
         using var commandResponse = await http.SendAsync(commandRequest);
-        var command = await commandResponse.Content.ReadFromJsonAsync<BridgeCommand>();
+        var command = await commandResponse.Content.ReadFromJsonAsync<BridgeCommand>(new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.Equal("send_message", command!.Type);
         Assert.Equal("hello", command.Text);
         var response = await http.PostAsJsonAsync("/events", new { type = "response_complete", id = command.Id, text = "Hi!" }, new CancellationTokenSource(2000).Token, bridge.SessionToken);
