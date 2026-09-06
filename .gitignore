@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Swift / Xcode build products
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Packaged/local build outputs
+outputs/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+
+# Temporary files and logs
+*.tmp
+*.temp
+*.log

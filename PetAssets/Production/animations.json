@@ -1,0 +1,125 @@
+{
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    432
+  ],
+  "animations": [
+    {
+      "state": "idle",
+      "frames": 7,
+      "durationsMs": [
+        360,
+        360,
+        360,
+        440,
+        360,
+        360,
+        440
+      ],
+      "loop": true
+    },
+    {
+      "state": "blink",
+      "frames": 5,
+      "durationsMs": [
+        90,
+        90,
+        130,
+        90,
+        160
+      ],
+      "loop": false
+    },
+    {
+      "state": "click",
+      "frames": 8,
+      "durationsMs": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "loop": false
+    },
+    {
+      "state": "thinking",
+      "frames": 10,
+      "durationsMs": [
+        280,
+        280,
+        280,
+        280,
+        280,
+        280,
+        280,
+        280,
+        280,
+        280
+      ],
+      "loop": true
+    },
+    {
+      "state": "replying",
+      "frames": 7,
+      "durationsMs": [
+        240,
+        240,
+        240,
+        240,
+        240,
+        240,
+        240
+      ],
+      "loop": true
+    },
+    {
+      "state": "answerStart",
+      "frames": 6,
+      "durationsMs": [
+        130,
+        130,
+        130,
+        130,
+        130,
+        130
+      ],
+      "loop": false
+    },
+    {
+      "state": "answerComplete",
+      "frames": 6,
+      "durationsMs": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "loop": false
+    },
+    {
+      "state": "error",
+      "frames": 8,
+      "durationsMs": [
+        260,
+        260,
+        260,
+        260,
+        260,
+        260,
+        260,
+        260
+      ],
+      "loop": false
+    }
+  ]
+}
