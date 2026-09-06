@@ -10,13 +10,14 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
 
 @MainActor struct YukiChatView: View {
     @ObservedObject var model: CompanionModel
+    var companionName = "Yuki"
     let onSend: () -> Void
     let onCheckWorkChat: () -> Void
     let onClose: () -> Void
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Text("Yuki").font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
+                Text(companionName).font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
                 Text(status).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s Work chat")
@@ -29,7 +30,7 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                         if model.messages.isEmpty { Text("Ask me anything, Effy 💗").foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.top, 36) }
                         ForEach(model.messages) { message in
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(message.role == .user ? "You:" : "Yuki:").font(.caption.bold()).foregroundStyle(message.role == .user ? .pink : Color(red: 1, green: 0.72, blue: 0.87))
+                                Text(message.role == .user ? "You:" : "\(companionName):").font(.caption.bold()).foregroundStyle(message.role == .user ? .pink : Color(red: 1, green: 0.72, blue: 0.87))
                                 Text(message.text).textSelection(.enabled)
                             }
                             .padding(10).background(message.role == .user ? Color.pink.opacity(0.18) : Color.white.opacity(0.075)).clipShape(RoundedRectangle(cornerRadius: 12))

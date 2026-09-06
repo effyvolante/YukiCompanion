@@ -4,7 +4,7 @@ import SwiftUI
 @main @MainActor
 struct EffyWoWCompanionApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    var body: some Scene { Settings { EmptyView() } }
+    var body: some Scene { Settings { CompanionSettingsView(settings: CompanionSettings.shared) } }
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -12,7 +12,7 @@ struct EffyWoWCompanionApp: App {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         ChromeBridge.shared.start()
-        overlay = OverlayController()
+        overlay = OverlayController(settings: CompanionSettings.shared)
         overlay.show()
     }
 }
@@ -23,10 +23,13 @@ struct EffyWoWCompanionApp: App {
 }
 
 @MainActor final class OverlayController {
+    private let settings: CompanionSettings
     private let petPanel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
     private let chatPanel = YukiChatPanel(contentRect: .zero, styleMask: [.borderless, .resizable], backing: .buffered, defer: false)
     private let model = CompanionModel()
     private var petSize: CGFloat = 64
+
+    init(settings: CompanionSettings) { self.settings = settings }
 
     func show() {
         let savedSize = CGFloat(UserDefaults.standard.double(forKey: "yuki.petSize"))
@@ -42,7 +45,7 @@ struct EffyWoWCompanionApp: App {
         dragView.moved = { [weak self] in self?.savePetFrame(); self?.repositionBubble() }
         dragView.resized = { [weak self] delta in self?.resizePet(by: delta) }
         petPanel.contentView = dragView
-        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onClose: { [weak self] in self?.toggleBubble() }))
+        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onClose: { [weak self] in self?.toggleBubble() }))
 
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let saved = UserDefaults.standard.string(forKey: "yuki.petFrame").map(NSRectFromString)
@@ -83,7 +86,7 @@ struct EffyWoWCompanionApp: App {
 
     private func send() {
         guard let text = model.takeDraft() else { return }
-        let includeWoWView = model.includeWoWView
+        let includeWoWView = model.includeWoWView || (settings.automaticLook && DeicticQuestionDetector.needsContext(text))
         model.includeWoWView = false
         model.append(.user, text); model.state = .waiting
         Task { @MainActor [weak self] in
