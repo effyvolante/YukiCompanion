@@ -17,6 +17,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
       - run: dotnet build Windows/YukiCompanion.Windows.csproj --configuration Release
+      - run: dotnet test Windows.Tests/Windows.Tests.csproj --configuration Release
   integrity:
     runs-on: ubuntu-latest
     steps:

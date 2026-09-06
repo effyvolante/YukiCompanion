@@ -105,8 +105,8 @@ function isGenerationPlaceholder(text) {
   const normalized = text.replace(/\u2026/g, "...").replace(/\s+/g, " ").trim().toLowerCase();
   return /^(thinking|thinking\.\.\.|generating|generating\.\.\.|working|working\.\.\.|searching|searching\.\.\.|analyzing image|analyzing image\.\.\.|analyzing|analyzing\.\.\.)$/.test(normalized);
 }
-function emit(event) { fetch("http://127.0.0.1:39173/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(event) }).catch(() => {}); }
-function waitForResponse(id, baseline) {
+function emit(event, token) { const headers = { "Content-Type": "application/json" }; if (token) headers["X-Yuki-Bridge-Token"] = token; fetch("http://127.0.0.1:39173/events", { method: "POST", headers, body: JSON.stringify(event) }).catch(() => {}); }
+function waitForResponse(id, baseline, commandToken) {
   const baselineLast = baseline.at(-1) || "";
   let last = "", stable = 0, announced = false;
   const scan = () => {
@@ -126,8 +126,8 @@ function waitForResponse(id, baseline) {
     // assistant turn and must be returned to Yuki.
     const isNewTurn = turns.length > baseline.length || (current && current !== baselineLast);
     if (current && isNewTurn) {
-      if (!announced) { announced = true; emit({ type: "response_update", id }); }
-      if (stable >= 4) { emit({ type: "response_complete", id, text: current }); return; }
+      if (!announced) { announced = true; emit({ type: "response_update", id }, commandToken); }
+      if (stable >= 4) { emit({ type: "response_complete", id, text: current }, commandToken); return; }
     }
     setTimeout(scan, 500);
   };
@@ -144,7 +144,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   })().then(submissionMethod => {
     if (!submissionMethod) { sendResponse({ type: "error", message: "ChatGPT kept the draft instead of submitting it." }); return; }
     sendResponse({ type: "status", state: "submitted" });
-    waitForResponse(message.id, baseline);
+    waitForResponse(message.id, baseline, message.token);
   }).catch(() => sendResponse({ type: "error", message: "Yuki couldn’t prepare the ChatGPT message." }));
   return true;
 });

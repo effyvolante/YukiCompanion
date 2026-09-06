@@ -8,6 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>YukiCompanion</AssemblyName>
     <RootNamespace>YukiCompanion.Windows</RootNamespace>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\PetAssets\Production\**\*.png" LinkBase="Assets\Yuki" CopyToOutputDirectory="PreserveNewest" />
