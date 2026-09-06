@@ -21,7 +21,7 @@ public partial class SetupWindow : Window
     private void Next(object sender, RoutedEventArgs e)
     {
         if (step == 1 && !string.IsNullOrWhiteSpace(NameBox.Text)) configuration.CompanionDisplayName = NameBox.Text.Trim();
-        if (step == 2 && WindowBox.SelectedItem is WatchedWindowService.WindowInfo selected) configuration.WatchedApplication = new() { DisplayName = selected.Title, Identifier = selected.Identifier, WindowIdentifier = selected.Handle.ToString() };
+        if (step == 2 && WindowBox.SelectedItem is WatchedWindowService.WindowInfo selected) configuration.WatchedApplication = new() { DisplayName = selected.Title, Identifier = selected.Identifier, WindowIdentifier = selected.Title };
         if (step >= 4) { configuration.OnboardingCompleted = true; configuration.Save(); DialogResult = true; Close(); return; }
         step++; ShowStep();
     }

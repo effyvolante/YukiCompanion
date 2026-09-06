@@ -11,6 +11,7 @@ public sealed class ChromeBridgeClient : IDisposable
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     private readonly HttpListener listener = new();
     private readonly Queue<object> commands = new();
+    private readonly Dictionary<string, byte[]> contexts = new();
     private readonly Dictionary<string, TaskCompletionSource<BridgeEvent>> pending = new();
     private readonly object gate = new();
     private readonly string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
@@ -22,15 +23,21 @@ public sealed class ChromeBridgeClient : IDisposable
     {
         listener.Prefixes.Add($"http://127.0.0.1:{port}/"); listener.Start(); _ = ServeAsync();
     }
-    public async Task SendAsync(string text, CancellationToken token = default)
+    public async Task SendAsync(string text, byte[]? contextImage = null, CancellationToken cancellationToken = default)
     {
         var id = Guid.NewGuid().ToString();
+        var contextId = contextImage is null ? null : Guid.NewGuid().ToString();
         var completion = new TaskCompletionSource<BridgeEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
-        lock (gate) { pending[id] = completion; commands.Enqueue(new { type = "send_message", id, text, token }); }
-        try { var result = await completion.Task.WaitAsync(TimeSpan.FromMinutes(2), token); if (result.Type == "response_complete") ReplyReceived?.Invoke(result.Text ?? ""); else ErrorReceived?.Invoke(result.Message ?? "Chrome bridge error."); }
+        lock (gate)
+        {
+            pending[id] = completion;
+            if (contextId is not null) contexts[contextId] = contextImage!;
+            commands.Enqueue(new { type = "send_message", id, text, contextID = contextId, token });
+        }
+        try { var result = await completion.Task.WaitAsync(TimeSpan.FromMinutes(2), cancellationToken); if (result.Type == "response_complete") ReplyReceived?.Invoke(result.Text ?? ""); else ErrorReceived?.Invoke(result.Message ?? "Chrome bridge error."); }
         catch (OperationCanceledException) { ErrorReceived?.Invoke("The Chrome request was cancelled."); }
         catch (TimeoutException) { ErrorReceived?.Invoke("Chrome did not return a response."); }
-        finally { lock (gate) { pending.Remove(id); } }
+        finally { lock (gate) { pending.Remove(id); if (contextId is not null) contexts.Remove(contextId); } }
     }
     private async Task ServeAsync()
     {
@@ -38,10 +45,17 @@ public sealed class ChromeBridgeClient : IDisposable
     }
     private async Task HandleAsync(HttpListenerContext context)
     {
-        context.Response.Headers["Access-Control-Allow-Origin"] = "*"; context.Response.Headers["Access-Control-Allow-Headers"] = "content-type";
+        context.Response.Headers["Access-Control-Allow-Origin"] = "*"; context.Response.Headers["Access-Control-Allow-Headers"] = "content-type, x-yuki-bridge-token";
         object? result = null;
+        byte[]? binary = null;
         if (context.Request.HttpMethod == "OPTIONS") context.Response.StatusCode = 204;
         else if (context.Request.HttpMethod == "GET" && context.Request.Url?.AbsolutePath == "/session") result = new { token };
+        else if (context.Request.HttpMethod == "GET" && context.Request.Url?.AbsolutePath.StartsWith("/context/", StringComparison.Ordinal) == true && Authorized(context))
+        {
+            var contextId = Uri.UnescapeDataString(context.Request.Url.AbsolutePath[9..]);
+            lock (gate) { contexts.TryGetValue(contextId, out binary); }
+            if (binary is null) { context.Response.StatusCode = 404; result = new { error = "context not found" }; }
+        }
         else if (context.Request.HttpMethod == "GET" && context.Request.Url?.AbsolutePath == "/commands" && Authorized(context)) { lock (gate) result = commands.Count > 0 ? commands.Dequeue() : new { type = "idle" }; }
         else if (context.Request.HttpMethod == "POST" && context.Request.Url?.AbsolutePath == "/events" && Authorized(context))
         {
@@ -49,8 +63,10 @@ public sealed class ChromeBridgeClient : IDisposable
             if (value?.Id is not null && value.Type is ("response_complete" or "error")) lock (gate) { if (pending.TryGetValue(value.Id, out var waiter)) waiter.TrySetResult(value); }
             result = new { ok = true };
         }
-        else { context.Response.StatusCode = context.Request.Url?.AbsolutePath is "/commands" or "/events" ? 401 : 404; result = new { error = "not found" }; }
-        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(result ?? new { })); context.Response.ContentType = "application/json"; context.Response.ContentLength64 = bytes.Length; await context.Response.OutputStream.WriteAsync(bytes); context.Response.Close();
+        else { context.Response.StatusCode = (context.Request.Url?.AbsolutePath is "/commands" or "/events" || context.Request.Url?.AbsolutePath.StartsWith("/context/", StringComparison.Ordinal) == true) ? 401 : 404; result = new { error = "not found" }; }
+        var bytes = binary ?? Encoding.UTF8.GetBytes(JsonSerializer.Serialize(result ?? new { }));
+        context.Response.ContentType = binary is null ? "application/json" : "image/png";
+        context.Response.ContentLength64 = bytes.Length; await context.Response.OutputStream.WriteAsync(bytes); context.Response.Close();
     }
     private bool Authorized(HttpListenerContext context) => context.Request.Headers["X-Yuki-Bridge-Token"] == token;
     public void Dispose() { if (listener.IsListening) listener.Stop(); listener.Close(); }

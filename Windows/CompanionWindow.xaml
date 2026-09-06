@@ -3,7 +3,7 @@
     <Grid>
       <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <StackPanel Grid.Row="0" MouseLeftButtonDown="Drag"><TextBlock x:Name="CompanionName" FontSize="22" HorizontalAlignment="Center" Foreground="#7A3157"/><ScrollViewer Height="80" Margin="0,8"><TextBlock x:Name="Transcript" TextWrapping="Wrap" Foreground="#51233B"/></ScrollViewer></StackPanel>
-      <DockPanel Grid.Row="1"><TextBox x:Name="Composer" MinWidth="130" KeyDown="ComposerKeyDown"/><Button Content="Send" Margin="5,0,0,0" Click="Send"/><Button Content="…" Width="26" Margin="5,0,0,0" Click="OpenSettings"/></DockPanel>
+      <DockPanel Grid.Row="1"><TextBox x:Name="Composer" MinWidth="105" KeyDown="ComposerKeyDown"/><Button Content="Send" Margin="5,0,0,0" Click="Send"/><Button Content="Look" Margin="5,0,0,0" Click="Look"/><Button Content="…" Width="26" Margin="5,0,0,0" Click="OpenSettings"/></DockPanel>
     </Grid>
   </Border>
 </Window>

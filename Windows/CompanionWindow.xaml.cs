@@ -20,6 +20,17 @@ public partial class CompanionWindow : Window
 
     private void Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
     private async void Send(object sender, RoutedEventArgs e) => await SendMessageAsync();
+    private async void Look(object sender, RoutedEventArgs e)
+    {
+        var watched = configuration.WatchedApplication;
+        if (watched is null) { System.Windows.MessageBox.Show("Choose a watched window in setup first.", configuration.CompanionDisplayName); return; }
+        var window = new WatchedWindowService().Resolve(watched);
+        var capture = window is null ? null : new WatchedWindowService().CaptureWindow(window);
+        if (capture is null) { Transcript.Text += "\nError: I couldn’t capture the selected window."; return; }
+        const string prompt = "What's this?";
+        Transcript.Text += $"\nYou: {prompt}";
+        await bridge.SendAsync(prompt, capture.Png);
+    }
     private async void ComposerKeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == System.Windows.Input.Key.Enter && System.Windows.Input.Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; await SendMessageAsync(); } }
     private async Task SendMessageAsync()
     {

@@ -24,6 +24,13 @@ public sealed class WatchedWindowService
         return results;
     }
 
+    public WindowInfo? Resolve(WatchedApplication watched)
+    {
+        return Discover().FirstOrDefault(window =>
+            string.Equals(window.ProcessName, watched.Identifier, StringComparison.OrdinalIgnoreCase) &&
+            (string.IsNullOrWhiteSpace(watched.WindowIdentifier) || string.Equals(window.Title, watched.WindowIdentifier, StringComparison.OrdinalIgnoreCase)));
+    }
+
     public Capture? CaptureWindow(WindowInfo window)
     {
         if (!IsWindow(window.Handle) || IsIconic(window.Handle)) return null;
