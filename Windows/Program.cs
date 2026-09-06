@@ -2,7 +2,7 @@ using System.Windows;
 
 namespace YukiCompanion.Windows;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     [STAThread]
     public static void Main() => new App().Run();

@@ -20,7 +20,7 @@ public partial class CompanionWindow : Window
 
     private void Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
     private async void Send(object sender, RoutedEventArgs e) => await SendMessageAsync();
-    private async void ComposerKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; await SendMessageAsync(); } }
+    private async void ComposerKeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == System.Windows.Input.Key.Enter && System.Windows.Input.Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; await SendMessageAsync(); } }
     private async Task SendMessageAsync()
     {
         var text = Composer.Text.Trim();
