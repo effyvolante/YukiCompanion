@@ -11,6 +11,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var configuration = CompanionConfiguration.Load();
+        if (!configuration.OnboardingCompleted)
+        {
+            var setup = new SetupWindow(configuration);
+            if (setup.ShowDialog() != true) { Shutdown(); return; }
+        }
         var window = new CompanionWindow(configuration);
         MainWindow = window;
         window.Show();
