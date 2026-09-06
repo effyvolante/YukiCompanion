@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "companionDisplayName": "Yuki",
+  "themeId": "Yuki",
+  "watchedApplication": {
+    "displayName": "World of Warcraft",
+    "platform": "macOS",
+    "identifier": "com.blizzard.worldofwarcraft",
+    "windowIdentifier": null
+  },
+  "companion": { "size": 180, "bubbleWidth": 360, "position": null },
+  "chatGPT": { "boundConversationId": null, "boundConversationTitle": null },
+  "onboardingCompleted": false,
+  "launchAtLogin": false,
+  "automaticLook": false,
+  "automaticUpdates": true
+}
