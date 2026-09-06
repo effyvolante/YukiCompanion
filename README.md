@@ -1,6 +1,8 @@
-# Effy WoW Companion
+# Yuki Companion
 
-Yuki is a tiny pink companion that uses your normal logged-in ChatGPT account through a ChatGPT tab in Google Chrome. The Chrome tab is the backend; Yuki’s pink bubble remains the visible chat interface.
+Yuki is the default theme for Yuki Companion, a tiny pink companion that uses your normal logged-in ChatGPT account through a ChatGPT tab in Google Chrome. The Chrome tab is the backend; Yuki’s pink bubble remains the visible chat interface.
+
+The current known-good implementation is the macOS app in `Sources/EffyWoWCompanion`. Windows development is isolated under `Windows/`; shared contracts live under `Shared/`. The macOS app remains the compatibility reference and is not rewritten as part of the cross-platform work.
 
 No OpenAI API key, API billing, private endpoint, cookie access, or credential extraction is used.
 

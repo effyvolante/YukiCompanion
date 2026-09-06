@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Yuki Companion configuration",
+  "type": "object",
+  "required": ["companionDisplayName", "watchedApplication"],
+  "properties": {
+    "companionDisplayName": { "type": "string", "minLength": 1, "default": "Yuki" },
+    "watchedApplication": {
+      "type": "object",
+      "required": ["displayName", "platform", "identifier"],
+      "properties": {
+        "displayName": { "type": "string", "minLength": 1 },
+        "platform": { "enum": ["macOS", "Windows"] },
+        "identifier": { "type": "string", "minLength": 1 },
+        "windowIdentifier": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "chatGPT": {
+      "type": "object",
+      "properties": {
+        "boundConversationId": { "type": ["string", "null"] },
+        "boundConversationTitle": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
