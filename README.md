@@ -14,6 +14,8 @@ No OpenAI API key, API billing, private endpoint, cookie access, or credential e
 - ChatGPT open in Chrome and logged in
 - Xcode 15+ or Swift command-line tools
 
+For Windows, use the `YukiCompanion-windows` artifact from a green GitHub Actions run. It is a self-contained `win-x64` WPF package for Windows 10 version 1903 or later and includes the shared `ChromeExtension` folder plus its installation guide.
+
 ## Build and launch
 
 ```bash

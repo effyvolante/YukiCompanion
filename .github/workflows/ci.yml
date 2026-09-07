@@ -46,7 +46,9 @@ jobs:
         shell: pwsh
         run: |
           $publish = Join-Path $env:RUNNER_TEMP "YukiCompanion-Windows"
-          dotnet publish Windows/YukiCompanion.Windows.csproj --configuration Release --no-restore --self-contained false --output $publish
+          # Ship the runtime with the handoff package so a tester does not need
+          # to install .NET separately on the Windows machine.
+          dotnet publish Windows/YukiCompanion.Windows.csproj --configuration Release --runtime win-x64 --self-contained true --output $publish
           Copy-Item ChromeExtension (Join-Path $publish "ChromeExtension") -Recurse -Force
           Copy-Item Windows/README.md (Join-Path $publish "README-Windows.md") -Force
           Compress-Archive -Path (Join-Path $publish "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "YukiCompanion-Windows.zip") -Force
