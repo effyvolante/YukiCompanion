@@ -21,7 +21,7 @@ struct EffyWoWCompanionApp: App {
         guard !UserDefaults.standard.bool(forKey: "yuki.onboarding.seen") else { return }
         let alert = NSAlert()
         alert.messageText = "Welcome to Yuki Companion"
-        alert.informativeText = "For Look, allow Yuki in System Settings → Privacy & Security → Screen Recording. Then load the ChromeExtension folder in chrome://extensions and bind your Yuki conversation tab. Yuki only captures the selected WoW window."
+        alert.informativeText = "For Look, allow Yuki in System Settings → Privacy & Security → Screen Recording. Then load the ChromeExtension folder in chrome://extensions and bind your Yuki conversation tab. Yuki captures only the selected application’s visible window."
         alert.addButton(withTitle: "Open Screen Recording Settings")
         alert.addButton(withTitle: "I’ll do this later")
         if alert.runModal() == .alertFirstButtonReturn, let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
@@ -111,7 +111,7 @@ struct EffyWoWCompanionApp: App {
                 if includeWoWView {
                     model.state = .capturing
                     guard let capture = WoWScreenshotService().capture() else {
-                        model.append(.yuki, "I can’t see your WoW window right now.")
+                        model.append(.yuki, "I can’t see the selected application window right now.")
                         model.state = .error
                         return
                     }

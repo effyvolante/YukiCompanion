@@ -47,7 +47,7 @@ Then open Yuki’s bubble and send `hello yuki`.
 
 The normal Chrome bridge does not require Yuki to control ChatGPT through macOS Accessibility. The old desktop Accessibility bridge remains in the source as a legacy fallback only.
 
-Screen Recording is still required for the later WoW-only screenshot/Look feature. Yuki must never fall back to capturing the desktop.
+Screen Recording is required for the screenshot/Look feature. Yuki captures only the selected application’s visible window and never falls back to capturing the desktop.
 
 ## Troubleshooting
 
