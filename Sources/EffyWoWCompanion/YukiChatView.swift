@@ -110,7 +110,7 @@ private struct YukiMenuView: View {
             .buttonStyle(.plain)
             Divider().overlay(Color.pink.opacity(0.35))
             Button {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                SettingsWindowController.shared.show()
             } label: {
                 MenuLabel(title: "Settings…", detail: "Name, app, conversation, startup")
             }

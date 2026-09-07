@@ -9,12 +9,29 @@ struct EffyWoWCompanionApp: App {
         Settings { CompanionSettingsView(settings: CompanionSettings.shared) }
             .commands {
                 CommandGroup(replacing: .appSettings) {
-                    Button("Settings…") {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                    }
+                    Button("Settings…") { SettingsWindowController.shared.show() }
                     .keyboardShortcut(",", modifiers: [.command])
                 }
             }
+    }
+}
+
+@MainActor
+final class SettingsWindowController {
+    static let shared = SettingsWindowController()
+    private var window: NSWindow?
+
+    func show() {
+        if window == nil {
+            let settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 430), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+            settingsWindow.title = "Yuki Companion Settings"
+            settingsWindow.isReleasedWhenClosed = false
+            settingsWindow.contentView = NSHostingView(rootView: CompanionSettingsView(settings: CompanionSettings.shared))
+            window = settingsWindow
+        }
+        window?.center()
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
