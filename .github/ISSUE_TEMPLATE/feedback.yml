@@ -1,0 +1,45 @@
+name: Yuki Companion feedback
+description: Report a problem, request an improvement, or share design advice.
+title: "[Feedback]: "
+labels:
+  - feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Yuki Companion. Please avoid including passwords, private messages, or other sensitive information.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feedback category
+      description: Choose the closest category so the review queue can prioritize it.
+      options:
+        - Essential functionality
+        - Quality of life
+        - Design advice
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: e.g. 0.2.3
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened or what would you like changed?
+      placeholder: Describe the problem, request, or design idea.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps or examples
+      description: For a problem, include the steps that reproduce it. For a request, include an example of the desired behavior.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Include platform, browser, and relevant screenshots if helpful. Do not include secrets.

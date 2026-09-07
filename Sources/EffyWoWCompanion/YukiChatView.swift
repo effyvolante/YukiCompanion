@@ -15,16 +15,18 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
     let onSend: () -> Void
     let onCheckWorkChat: () -> Void
     let onCheckForUpdates: () -> Void
+    let onProvideFeedback: () -> Void
     let onClose: () -> Void
     @State private var showMenu = false
 
-    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onCheckForUpdates: @escaping () -> Void = {}, onClose: @escaping () -> Void) {
+    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onCheckForUpdates: @escaping () -> Void = {}, onProvideFeedback: @escaping () -> Void = {}, onClose: @escaping () -> Void) {
         self.model = model
         self.settings = settings
         self.companionName = companionName
         self.onSend = onSend
         self.onCheckWorkChat = onCheckWorkChat
         self.onCheckForUpdates = onCheckForUpdates
+        self.onProvideFeedback = onProvideFeedback
         self.onClose = onClose
     }
 
@@ -48,6 +50,9 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                     }, onCheckForUpdates: {
                         showMenu = false
                         onCheckForUpdates()
+                    }, onProvideFeedback: {
+                        showMenu = false
+                        onProvideFeedback()
                     })
                 }
                 Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s App Companion chat")
@@ -97,6 +102,7 @@ private struct YukiMenuView: View {
     @ObservedObject var settings: CompanionSettings
     let onCheckWorkChat: () -> Void
     let onCheckForUpdates: () -> Void
+    let onProvideFeedback: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -135,6 +141,10 @@ private struct YukiMenuView: View {
             .buttonStyle(.plain)
             Button(action: onCheckForUpdates) {
                 MenuLabel(title: "Check for updates", detail: "Open the latest GitHub release")
+            }
+            .buttonStyle(.plain)
+            Button(action: onProvideFeedback) {
+                MenuLabel(title: "Send feedback", detail: "Open the private feedback form")
             }
             .buttonStyle(.plain)
             Button(action: onCheckWorkChat) {

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 
 namespace YukiCompanion.Windows;
 
@@ -15,6 +16,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(CompanionConfiguration configuration)
     {
         InitializeComponent();
+        Icon = new BitmapImage(new Uri(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", "Idle", "idle_000.png"), UriKind.Absolute));
         this.configuration = configuration;
         NameBox.Text = configuration.CompanionDisplayName;
         ConversationBox.Text = configuration.ChromeConversation;

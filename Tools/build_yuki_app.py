@@ -11,8 +11,18 @@ contents = app / 'Contents'
 shutil.copy2(binary_dir / 'EffyWoWCompanion', contents / 'MacOS' / 'EffyWoWCompanion')
 # SwiftPM's generated accessor resolves this bundle relative to Bundle.main.
 shutil.copytree(binary_dir / 'EffyWoWCompanion_EffyWoWCompanion.bundle', contents / 'Resources' / 'EffyWoWCompanion_EffyWoWCompanion.bundle', dirs_exist_ok=True)
+iconset = root / 'outputs' / '.YukiIcon.iconset'
+if iconset.exists():
+    shutil.rmtree(iconset)
+iconset.mkdir(parents=True)
+icon_source = root / 'PetAssets' / 'Production' / 'Idle' / 'idle_000.png'
+for size in (16, 32, 128, 256, 512):
+    subprocess.run(['sips', '-z', str(size), str(size), str(icon_source), '--out', str(iconset / f'icon_{size}x{size}.png')], check=True, stdout=subprocess.DEVNULL)
+    retina_size = size * 2
+    subprocess.run(['sips', '-z', str(retina_size), str(retina_size), str(icon_source), '--out', str(iconset / f'icon_{size}x{size}@2x.png')], check=True, stdout=subprocess.DEVNULL)
+subprocess.run(['iconutil', '-c', 'icns', str(iconset), '-o', str(contents / 'Resources' / 'YukiIcon.icns')], check=True)
 with (contents / 'Info.plist').open('wb') as f:
-    plistlib.dump(dict(CFBundleIdentifier='com.effy.wowcompanion', CFBundleName='Yuki Companion', CFBundleDisplayName='Yuki — App Companion', CFBundleExecutable='EffyWoWCompanion', CFBundlePackageType='APPL', CFBundleVersion='4', CFBundleShortVersionString='0.2.2', LSMinimumSystemVersion='13.0', NSHighResolutionCapable=True), f)
+    plistlib.dump(dict(CFBundleIdentifier='com.effy.wowcompanion', CFBundleName='Yuki Companion', CFBundleDisplayName='Yuki — App Companion', CFBundleExecutable='EffyWoWCompanion', CFBundleIconFile='YukiIcon.icns', CFBundlePackageType='APPL', CFBundleVersion='5', CFBundleShortVersionString='0.2.3', LSMinimumSystemVersion='13.0', NSHighResolutionCapable=True), f)
 subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(app)], check=True)
 # Keep the launch location used during local testing in sync with the packaged
 # build. This prevents accidentally launching an older binary with stale bridge

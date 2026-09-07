@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace YukiCompanion.Windows;
 
@@ -14,6 +15,7 @@ public partial class CompanionWindow : Window
     {
         InitializeComponent();
         this.configuration = configuration;
+        Icon = new BitmapImage(new Uri(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", "Idle", "idle_000.png"), UriKind.Absolute));
         bridge = new ChromeBridgeClient();
         Width = Height = Math.Max(260, configuration.Size + 80);
         Title = configuration.CompanionDisplayName;
@@ -41,6 +43,11 @@ public partial class CompanionWindow : Window
     {
         MenuButton.ContextMenu!.IsOpen = false;
         await UpdateService.CheckAsync(manual: true, this);
+    }
+    private void OpenFeedback(object sender, RoutedEventArgs e)
+    {
+        MenuButton.ContextMenu!.IsOpen = false;
+        FeedbackService.Open(this);
     }
     private async void Look(object sender, RoutedEventArgs e)
     {

@@ -18,6 +18,7 @@ public partial class PetWindow : Window
     public PetWindow(CompanionWindow chat)
     {
         InitializeComponent();
+        Icon = new BitmapImage(new Uri(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", "Idle", "idle_000.png"), UriKind.Absolute));
         this.chat = chat;
         chat.VisualStateChanged += SetState;
         timer.Tick += (_, _) => Advance();

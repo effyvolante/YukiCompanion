@@ -104,7 +104,7 @@ final class SettingsWindowController {
         dragView.moved = { [weak self] in self?.savePetFrame(); self?.repositionBubble() }
         dragView.resized = { [weak self] delta in self?.resizePet(by: delta) }
         petPanel.contentView = dragView
-        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onClose: { [weak self] in self?.toggleBubble() }))
+        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onProvideFeedback: { FeedbackService.openForm() }, onClose: { [weak self] in self?.toggleBubble() }))
 
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let saved = UserDefaults.standard.string(forKey: "yuki.petFrame").map(NSRectFromString)

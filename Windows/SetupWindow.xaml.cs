@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 
 namespace YukiCompanion.Windows;
 
@@ -10,7 +11,7 @@ public partial class SetupWindow : Window
     private readonly WatchedWindowService windows = new();
     private IReadOnlyList<WatchedWindowService.ApplicationInfo> applications = [];
     private int step;
-    public SetupWindow(CompanionConfiguration configuration) { InitializeComponent(); this.configuration = configuration; ShowStep(); }
+    public SetupWindow(CompanionConfiguration configuration) { InitializeComponent(); Icon = new BitmapImage(new Uri(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", "Idle", "idle_000.png"), UriKind.Absolute)); this.configuration = configuration; ShowStep(); }
     private void ShowStep()
     {
         StepTitle.Text = step switch { 0 => "Let’s set up your app companion.", 1 => "What should your companion be called?", 2 => "What app should your companion be able to look at?", 3 => "Connect Chrome or Edge", _ => "Your companion is ready!" };

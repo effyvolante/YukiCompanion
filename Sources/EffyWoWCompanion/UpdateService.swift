@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class UpdateService {
     static let shared = UpdateService()
-    static let currentVersion = "0.2.2"
+    static let currentVersion = "0.2.3"
     static let repositoryURL = URL(string: "https://github.com/effyvolante/YukiCompanion")!
     private static let releasesAPI = URL(string: "https://api.github.com/repos/effyvolante/YukiCompanion/releases/latest")!
 
@@ -24,7 +24,7 @@ final class UpdateService {
                 if isNewer(release.tagName) {
                     showUpdateAlert(for: release)
                 } else if manual {
-                    showAlert(message: "Yuki is up to date", detail: "You are running Yuki (Self.currentVersion).", buttons: ["Done"])
+                    showAlert(message: "Yuki is up to date", detail: "You are running Yuki \(Self.currentVersion).", buttons: ["Done"])
                 }
             } catch {
                 if manual { showAlert(message: "Couldn’t check for updates", detail: "GitHub could not be reached right now. You can check the releases page manually.", buttons: ["Open GitHub", "Later"], openRepositoryOnFirstButton: true) }
@@ -63,7 +63,7 @@ final class UpdateService {
     private func showUpdateAlert(for release: Release) {
         let asset = release.assets.first { $0.name.lowercased().contains("macos") && $0.name.lowercased().hasSuffix(".zip") }
         let destination = asset?.browserDownloadURL ?? release.htmlURL
-        showAlert(message: "Yuki (release.tagName) is available", detail: "Open GitHub to download the macOS update. Quit Yuki before replacing the app, then launch the new copy.", buttons: ["Open update", "Later"], openURL: destination)
+        showAlert(message: "Yuki \(release.tagName) is available", detail: "Open GitHub to download the macOS update. Quit Yuki before replacing the app, then launch the new copy.", buttons: ["Open update", "Later"], openURL: destination)
     }
 
     private func showNoReleaseAlert() {

@@ -3,13 +3,14 @@
 <plist version="1.0">
 <dict>
 <key>CFBundleDisplayName</key><string>Yuki Companion</string>
+<key>CFBundleIconFile</key><string>YukiIcon.icns</string>
 <key>CFBundleExecutable</key><string>EffyWoWCompanion</string>
 <key>CFBundleIdentifier</key><string>com.effyvolante.yukicompanion</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>Yuki Companion</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.2.2</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>0.2.3</string>
+<key>CFBundleVersion</key><string>5</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>NSScreenCaptureUsageDescription</key><string>Yuki uses the selected application window only when you ask her to look.</string>
