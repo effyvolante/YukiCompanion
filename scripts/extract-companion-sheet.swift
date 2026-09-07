@@ -17,6 +17,8 @@ guard arguments.count == 4, let topInset = Double(arguments[3]) else {
 let sourceURL = URL(fileURLWithPath: arguments[1])
 let outputURL = URL(fileURLWithPath: arguments[2], isDirectory: true)
 let assetPrefix = outputURL.lastPathComponent.lowercased()
+let paleArtworkThreshold = assetPrefix == "belle" ? 0.03 : 0.06
+let edgeArtworkThreshold = assetPrefix == "belle" ? 0.04 : 0.18
 let sourceImage = NSImage(contentsOf: sourceURL)!
 var sourceRect = NSRect(origin: .zero, size: sourceImage.size)
 let sourceRep = NSBitmapImageRep(data: sourceImage.tiffRepresentation!)!
@@ -73,7 +75,7 @@ func transparent(_ image: CGImage) -> CGImage {
         // Remove only connected, near-neutral sheet background/halo pixels.
         // This preserves pale companion fills and Yuki's white highlights.
         let nearCropEdge = x <= 10 || x >= image.width - 11 || y <= 10 || y >= image.height - 11
-        guard distance < 130, saturation < 0.06 || (nearCropEdge && saturation < 0.18) else { continue }
+        guard distance < 130, saturation < paleArtworkThreshold || (nearCropEdge && saturation < edgeArtworkThreshold) else { continue }
         data[index + 3] = 0
         enqueue(x - 1, y); enqueue(x + 1, y); enqueue(x, y - 1); enqueue(x, y + 1)
     }
@@ -102,6 +104,27 @@ func transparent(_ image: CGImage) -> CGImage {
             let minimum = min(r, min(g, b))
             if data[index + 3] > 0 && maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { data[index + 3] = 0 }
         }
+    }
+    // Clear long divider runs that sit just inside the crop boundary.
+    for y in 0..<image.height where y < 12 || y >= image.height - 12 {
+        var count = 0
+        for x in 0..<image.width {
+            let index = (y * image.width + x) * 4
+            let r = Double(data[index]) / 255, g = Double(data[index + 1]) / 255, b = Double(data[index + 2]) / 255
+            let maximum = max(r, max(g, b)), minimum = min(r, min(g, b))
+            if data[index + 3] > 0 && maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { count += 1 }
+        }
+        if count > image.width / 3 { for x in 0..<image.width { data[(y * image.width + x) * 4 + 3] = 0 } }
+    }
+    for x in 0..<image.width where x < 12 || x >= image.width - 12 {
+        var count = 0
+        for y in 0..<image.height {
+            let index = (y * image.width + x) * 4
+            let r = Double(data[index]) / 255, g = Double(data[index + 1]) / 255, b = Double(data[index + 2]) / 255
+            let maximum = max(r, max(g, b)), minimum = min(r, min(g, b))
+            if data[index + 3] > 0 && maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { count += 1 }
+        }
+        if count > image.height / 3 { for y in 0..<image.height { data[(y * image.width + x) * 4 + 3] = 0 } }
     }
     var visitedComponents = Array(repeating: false, count: pixelCount)
     for y in 0..<image.height {
@@ -202,6 +225,14 @@ func writeFrame(_ image: CGImage, to url: URL) {
     let anchorY = bounds?.midY ?? CGFloat(image.height) / 2
     let drawOrigin = CGPoint(x: 256 - anchorX * scale, y: 270 - anchorY * scale)
     canvas.draw(image, in: CGRect(x: drawOrigin.x, y: drawOrigin.y, width: drawWidth, height: drawHeight))
+    // Keep isolated source-sheet remnants from touching the runtime canvas.
+    if let data = canvas.data?.assumingMemoryBound(to: UInt8.self) {
+        for y in 0..<512 {
+            for x in 0..<512 where x < 6 || x >= 506 || y < 6 || y >= 506 {
+                data[(y * 512 + x) * 4 + 3] = 0
+            }
+        }
+    }
     let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(destination, canvas.makeImage()!, nil)
     CGImageDestinationFinalize(destination)

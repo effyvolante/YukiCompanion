@@ -51,9 +51,9 @@ private extension PetState {
     func duration(at index: Int) -> TimeInterval {
         let values: [TimeInterval]
         switch self {
-        case .idle,.ready: values = [0.55,0.75,0.55,0.70,0.55,0.65,0.95]
-        case .capturing,.opening,.waiting: values = Array(repeating: 0.34, count: 10)
-        case .replying: values = [0.42,0.55,0.42,0.60,0.42,0.55,0.75]
+        case .idle,.ready: values = [0.55,0.75,0.55,0.70,0.55,0.65,0.80,0.95]
+        case .capturing,.opening,.waiting: values = Array(repeating: 0.28, count: 8)
+        case .replying: values = [0.42,0.55,0.42,0.60,0.42,0.55,0.65,0.75]
         case .clicked: values = [0.09,0.08,0.09,0.11,0.13,0.15,0.20,0.30]
         case .error: values = [0.45,0.55,0.40,0.55,0.60,0.70,0.55,0.80]
         case .hover,.look,.answerStart,.answerComplete,.rareIdleA,.rareIdleB: values = Array(repeating: 0.22, count: 8)
