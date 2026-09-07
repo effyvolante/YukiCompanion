@@ -17,4 +17,8 @@ resource_bundle="$build_path/EffyWoWCompanion_EffyWoWCompanion.bundle"
 if [[ -d "$resource_bundle" ]]; then cp -R "$resource_bundle" "$output_path/Contents/Resources/"; fi
 
 chmod 755 "$output_path/Contents/MacOS/EffyWoWCompanion"
+# Swift's linker may leave an ad-hoc signature on the executable. Re-sign the
+# completed bundle so its Info.plist and resource bundle are sealed together.
+codesign --force --deep --sign - "$output_path"
+codesign --verify --deep --strict "$output_path"
 echo "Packaged $output_path"

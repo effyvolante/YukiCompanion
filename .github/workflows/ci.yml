@@ -18,6 +18,8 @@ jobs:
         run: bash scripts/package-macos-app.sh "$RUNNER_TEMP/yuki-package" "$RUNNER_TEMP/YukiCompanion.app"
       - name: Verify macOS app bundle
         run: test -x "$RUNNER_TEMP/YukiCompanion.app/Contents/MacOS/EffyWoWCompanion" && test -f "$RUNNER_TEMP/YukiCompanion.app/Contents/Info.plist"
+      - name: Verify macOS app signature
+        run: codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/YukiCompanion.app"
       - name: Archive macOS app
         run: ditto -c -k --keepParent "$RUNNER_TEMP/YukiCompanion.app" "$RUNNER_TEMP/YukiCompanion-macos.zip"
       - name: Upload macOS app artifact
