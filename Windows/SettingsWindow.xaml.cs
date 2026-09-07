@@ -76,8 +76,18 @@ public partial class SettingsWindow : Window
 
     private void OpenChromeExtensions(object sender, RoutedEventArgs e)
     {
-        try { Process.Start(new ProcessStartInfo { FileName = "chrome://extensions", UseShellExecute = true }); }
-        catch { System.Windows.MessageBox.Show("Open Google Chrome and enter chrome://extensions in its address bar.", Title); }
+        OpenExtensionsPage("chrome://extensions", "Open Google Chrome and enter chrome://extensions in its address bar.");
+    }
+
+    private void OpenEdgeExtensions(object sender, RoutedEventArgs e)
+    {
+        OpenExtensionsPage("edge://extensions", "Open Microsoft Edge and enter edge://extensions in its address bar.");
+    }
+
+    private void OpenExtensionsPage(string address, string fallback)
+    {
+        try { Process.Start(new ProcessStartInfo { FileName = address, UseShellExecute = true }); }
+        catch { System.Windows.MessageBox.Show(fallback, Title); }
     }
 
     private sealed record ThemeChoice(string Id, string Name);

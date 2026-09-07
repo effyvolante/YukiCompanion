@@ -13,12 +13,12 @@ public partial class SetupWindow : Window
     public SetupWindow(CompanionConfiguration configuration) { InitializeComponent(); this.configuration = configuration; ShowStep(); }
     private void ShowStep()
     {
-        StepTitle.Text = step switch { 0 => "Let’s set up your app companion.", 1 => "What should your companion be called?", 2 => "What app should your companion be able to look at?", 3 => "Connect Chrome", _ => "Your companion is ready!" };
-        StepBody.Text = step switch { 0 => "Yuki stays on your desktop and talks through your normal logged-in ChatGPT conversation in Chrome. This short setup covers the pieces she needs.", 1 => "This name appears in the companion bubble and in your chat transcript. You can change it later in Settings.", 2 => "Choose an application that is currently open, then choose its visible window. Yuki captures only that window when you ask her to look.", 3 => "Open Chrome’s extension page, load the ChromeExtension folder included with this download, then open your Yuki — App Companion conversation and bind that tab from the Yuki extension menu.", _ => "Yuki is ready. Keep the selected application window open, and keep the bound ChatGPT tab open in Chrome." };
+        StepTitle.Text = step switch { 0 => "Let’s set up your app companion.", 1 => "What should your companion be called?", 2 => "What app should your companion be able to look at?", 3 => "Connect Chrome or Edge", _ => "Your companion is ready!" };
+        StepBody.Text = step switch { 0 => "Yuki stays on your desktop and talks through your normal logged-in ChatGPT conversation in Chrome or Edge. This short setup covers the pieces she needs.", 1 => "This name appears in the companion bubble and in your chat transcript. You can change it later in Settings.", 2 => "Choose an application that is currently open, then choose its visible window. Yuki captures only that window when you ask her to look.", 3 => "Open Chrome or Edge’s extension page, load the matching extension folder included with this download, then open your Yuki — App Companion conversation and bind that tab from the Yuki extension menu.", _ => "Yuki is ready. Keep the selected application window open, and keep the bound ChatGPT tab open in your browser." };
         NameBox.Visibility = step == 1 ? Visibility.Visible : Visibility.Collapsed;
         ApplicationBox.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
         WindowBox.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
-        ChromeButton.Visibility = step == 3 ? Visibility.Visible : Visibility.Collapsed;
+        BrowserButtons.Visibility = step == 3 ? Visibility.Visible : Visibility.Collapsed;
         BackButton.Visibility = step > 0 && step < 4 ? Visibility.Visible : Visibility.Collapsed;
         NextButton.Content = step >= 4 ? "Finish" : "Continue";
         if (step == 1) { NameBox.Text = configuration.CompanionDisplayName; NameBox.Focus(); }
@@ -61,7 +61,17 @@ public partial class SetupWindow : Window
 
     private void OpenChromeExtensions(object sender, RoutedEventArgs e)
     {
-        try { Process.Start(new ProcessStartInfo { FileName = "chrome://extensions", UseShellExecute = true }); }
-        catch { System.Windows.MessageBox.Show("Open Google Chrome and enter chrome://extensions in its address bar.", Title); }
+        OpenExtensionsPage("chrome://extensions", "Open Google Chrome and enter chrome://extensions in its address bar.");
+    }
+
+    private void OpenEdgeExtensions(object sender, RoutedEventArgs e)
+    {
+        OpenExtensionsPage("edge://extensions", "Open Microsoft Edge and enter edge://extensions in its address bar.");
+    }
+
+    private void OpenExtensionsPage(string address, string fallback)
+    {
+        try { Process.Start(new ProcessStartInfo { FileName = address, UseShellExecute = true }); }
+        catch { System.Windows.MessageBox.Show(fallback, Title); }
     }
 }

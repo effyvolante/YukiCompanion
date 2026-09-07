@@ -50,6 +50,10 @@ jobs:
           # to install .NET separately on the Windows machine.
           dotnet publish Windows/YukiCompanion.Windows.csproj --configuration Release --runtime win-x64 --self-contained true --output $publish
           Copy-Item ChromeExtension (Join-Path $publish "ChromeExtension") -Recurse -Force
+          # Edge supports the same MV3 extension APIs. Keep one source of truth
+          # while giving Edge users an obvious folder to load unpacked.
+          Copy-Item ChromeExtension (Join-Path $publish "EdgeExtension") -Recurse -Force
+          Copy-Item ChromeExtension/README-Edge.md (Join-Path $publish "EdgeExtension/README.md") -Force
           Copy-Item Windows/README.md (Join-Path $publish "README-Windows.md") -Force
           Compress-Archive -Path (Join-Path $publish "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "YukiCompanion-Windows.zip") -Force
       - name: Upload Windows app artifact
