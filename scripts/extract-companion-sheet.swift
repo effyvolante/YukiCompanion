@@ -33,7 +33,10 @@ let cellHeight = (CGFloat(height) - topInset - CGFloat(height) * 0.025) / CGFloa
 // runtime frames. The source sheets already leave enough room for the action
 // marks inside the row itself.
 let cropWidth = min(118.0, cellWidth - 12.0)
-let cropHeight = max(56.0, min(104.0, cellHeight - 2.0))
+// Keep the crop inside the illustrated row so review-sheet dividers cannot
+// become runtime pixels.
+let rowInset = height > 800 ? -12.0 : 10.0
+let cropHeight = max(56.0, min(104.0, cellHeight - rowInset))
 
 func rgbaContext(width: Int, height: Int) -> CGContext {
     CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
@@ -63,9 +66,71 @@ func transparent(_ image: CGImage) -> CGImage {
         let index = (y * image.width + x) * 4
         let color = SIMD3<Int>(Int(data[index]), Int(data[index + 1]), Int(data[index + 2]))
         let distance = abs(color.x - background.x) + abs(color.y - background.y) + abs(color.z - background.z)
-        guard distance < 105 else { continue }
+        let maximum = max(color.x, max(color.y, color.z))
+        let minimum = min(color.x, min(color.y, color.z))
+        let saturation = maximum > 0 ? Double(maximum - minimum) / Double(maximum) : 0
+        // Remove only connected, near-neutral sheet background/halo pixels.
+        // This preserves pale companion fills and Yuki's white highlights.
+        let nearCropEdge = x <= 10 || x >= image.width - 11 || y <= 10 || y >= image.height - 11
+        guard distance < 130, saturation < 0.06 || (nearCropEdge && saturation < 0.18) else { continue }
         data[index + 3] = 0
         enqueue(x - 1, y); enqueue(x + 1, y); enqueue(x, y - 1); enqueue(x, y + 1)
+    }
+    // Some sheets draw tinted dividers inside the crop rather than touching
+    // its edge. Remove only long, near-neutral rows at the crop boundaries;
+    // this cannot affect expressive marks or the companion silhouette.
+    for y in 0..<image.height {
+        guard y < 18 || y >= image.height - 18 else { continue }
+        var neutralCount = 0
+        for x in 0..<image.width {
+            let index = (y * image.width + x) * 4
+            let r = Double(data[index]) / 255
+            let g = Double(data[index + 1]) / 255
+            let b = Double(data[index + 2]) / 255
+            let maximum = max(r, max(g, b))
+            let minimum = min(r, min(g, b))
+            if maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { neutralCount += 1 }
+        }
+        guard neutralCount > image.width / 4 else { continue }
+        for x in 0..<image.width {
+            let index = (y * image.width + x) * 4
+            let r = Double(data[index]) / 255
+            let g = Double(data[index + 1]) / 255
+            let b = Double(data[index + 2]) / 255
+            let maximum = max(r, max(g, b))
+            let minimum = min(r, min(g, b))
+            if maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { data[index + 3] = 0 }
+        }
+    }
+    var visitedComponents = Array(repeating: false, count: pixelCount)
+    for y in 0..<image.height {
+        for x in 0..<image.width {
+            let start = y * image.width + x
+            guard !visitedComponents[start], data[start * 4 + 3] > 0 else { continue }
+            var component: [(Int, Int)] = []
+            var queue = [(x, y)]
+            visitedComponents[start] = true
+            var cursor = 0
+            var touchesVerticalEdge = false
+            while cursor < queue.count {
+                let (cx, cy) = queue[cursor]; cursor += 1
+                component.append((cx, cy))
+                if cy == 0 || cy == image.height - 1 { touchesVerticalEdge = true }
+                for (nx, ny) in [(cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)] {
+                    guard nx >= 0, nx < image.width, ny >= 0, ny < image.height else { continue }
+                    let next = ny * image.width + nx
+                    guard !visitedComponents[next], data[next * 4 + 3] > 0 else { continue }
+                    visitedComponents[next] = true
+                    queue.append((nx, ny))
+                }
+            }
+            // Neighboring-row fragments are small and touch the crop edge.
+            // Keep any substantial component so a companion can never be
+            // accidentally removed by this cleanup.
+            if touchesVerticalEdge && component.count < 2000 {
+                for (px, py) in component { data[(py * image.width + px) * 4 + 3] = 0 }
+            }
+        }
     }
     let output = rgbaContext(width: image.width, height: image.height)
     output.data?.copyMemory(from: data, byteCount: pixelCount * 4)
@@ -91,7 +156,7 @@ for row in 0..<rows {
     try! FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
     for column in 0..<columns {
         let centerX = leftInset + cellWidth * (CGFloat(column) + 0.5) - 10
-        let centerY = topInset + cellHeight * (CGFloat(row) + 0.5) - 2
+        let centerY = topInset + cellHeight * (CGFloat(row) + 0.5) + (height > 800 ? 16 : 2)
         let crop = CGRect(x: max(0, centerX - cropWidth / 2), y: max(0, centerY - cropHeight / 2), width: cropWidth, height: cropHeight)
         let frame = transparent(sourceCG.cropping(to: crop)!)
         writeFrame(frame, to: folderURL.appendingPathComponent("\(assetPrefix)_\(prefix)\(String(format: "%03d", column)).png"))
