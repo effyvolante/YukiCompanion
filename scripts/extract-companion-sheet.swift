@@ -27,7 +27,8 @@ let columns = 8
 let rows = 9
 let leftInset = CGFloat(width) * 0.109
 let topInset = CGFloat(topInset)
-let cellWidth = (CGFloat(width) - leftInset) / CGFloat(columns)
+let rightInset = assetPrefix == "belle" ? 100.0 : 0.0
+let cellWidth = (CGFloat(width) - leftInset - rightInset) / CGFloat(columns)
 let cellHeight = (CGFloat(height) - topInset - CGFloat(height) * 0.025) / CGFloat(rows)
 // Keep each crop inside its row so neighboring review-sheet rows never become
 // runtime frames. The source sheets already leave enough room for the action
@@ -89,7 +90,7 @@ func transparent(_ image: CGImage) -> CGImage {
             let b = Double(data[index + 2]) / 255
             let maximum = max(r, max(g, b))
             let minimum = min(r, min(g, b))
-            if maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { neutralCount += 1 }
+            if data[index + 3] > 0 && maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { neutralCount += 1 }
         }
         guard neutralCount > image.width / 4 else { continue }
         for x in 0..<image.width {
@@ -99,7 +100,7 @@ func transparent(_ image: CGImage) -> CGImage {
             let b = Double(data[index + 2]) / 255
             let maximum = max(r, max(g, b))
             let minimum = min(r, min(g, b))
-            if maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { data[index + 3] = 0 }
+            if data[index + 3] > 0 && maximum > 0.65 && (maximum - minimum) / maximum < 0.25 { data[index + 3] = 0 }
         }
     }
     var visitedComponents = Array(repeating: false, count: pixelCount)
@@ -132,9 +133,60 @@ func transparent(_ image: CGImage) -> CGImage {
             }
         }
     }
+    // JPEG resampling can leave a near-white fringe attached to a dark
+    // outline. Remove only neutral pixels directly exposed to transparency;
+    // enclosed white highlights remain intact.
+    for y in 1..<(image.height - 1) {
+        for x in 1..<(image.width - 1) {
+            let index = (y * image.width + x) * 4
+            guard data[index + 3] > 0 else { continue }
+            let r = Double(data[index]) / 255
+            let g = Double(data[index + 1]) / 255
+            let b = Double(data[index + 2]) / 255
+            let maximum = max(r, max(g, b))
+            let minimum = min(r, min(g, b))
+            guard maximum > 0.72, (maximum - minimum) / maximum < 0.06 else { continue }
+            let neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+            if neighbors.contains(where: { data[($0.1 * image.width + $0.0) * 4 + 3] == 0 }) {
+                data[index + 3] = 0
+            }
+        }
+    }
     let output = rgbaContext(width: image.width, height: image.height)
     output.data?.copyMemory(from: data, byteCount: pixelCount * 4)
     return output.makeImage()!
+}
+
+func largestComponentBounds(_ image: CGImage) -> CGRect? {
+    let context = rgbaContext(width: image.width, height: image.height)
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    let data = context.data!.assumingMemoryBound(to: UInt8.self)
+    var visited = Array(repeating: false, count: image.width * image.height)
+    var best: [(Int, Int)] = []
+    for y in 0..<image.height {
+        for x in 0..<image.width {
+            let start = y * image.width + x
+            guard !visited[start], data[start * 4 + 3] > 20 else { continue }
+            var queue = [(x, y)], component: [(Int, Int)] = []
+            visited[start] = true
+            var cursor = 0
+            while cursor < queue.count {
+                let point = queue[cursor]; cursor += 1
+                component.append(point)
+                for neighbor in [(point.0 - 1, point.1), (point.0 + 1, point.1), (point.0, point.1 - 1), (point.0, point.1 + 1)] {
+                    guard neighbor.0 >= 0, neighbor.0 < image.width, neighbor.1 >= 0, neighbor.1 < image.height else { continue }
+                    let index = neighbor.1 * image.width + neighbor.0
+                    guard !visited[index], data[index * 4 + 3] > 20 else { continue }
+                    visited[index] = true
+                    queue.append(neighbor)
+                }
+            }
+            if component.count > best.count { best = component }
+        }
+    }
+    guard !best.isEmpty else { return nil }
+    let xs = best.map(\.0), ys = best.map(\.1)
+    return CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()! + 1, height: ys.max()! - ys.min()! + 1)
 }
 
 func writeFrame(_ image: CGImage, to url: URL) {
@@ -142,7 +194,14 @@ func writeFrame(_ image: CGImage, to url: URL) {
     let scale = min(480.0 / CGFloat(image.width), 480.0 / CGFloat(image.height))
     let drawWidth = CGFloat(image.width) * scale
     let drawHeight = CGFloat(image.height) * scale
-    canvas.draw(image, in: CGRect(x: (512 - drawWidth) / 2, y: (512 - drawHeight) / 2, width: drawWidth, height: drawHeight))
+    // Use the largest visual mass as the anchor. The source sheets are
+    // hand-laid-out, so action marks and pose shifts must not move the body.
+    // The fixed crop still guarantees a stable scale across every frame.
+    let bounds = largestComponentBounds(image)
+    let anchorX = bounds?.midX ?? CGFloat(image.width) / 2
+    let anchorY = bounds?.midY ?? CGFloat(image.height) / 2
+    let drawOrigin = CGPoint(x: 256 - anchorX * scale, y: 270 - anchorY * scale)
+    canvas.draw(image, in: CGRect(x: drawOrigin.x, y: drawOrigin.y, width: drawWidth, height: drawHeight))
     let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(destination, canvas.makeImage()!, nil)
     CGImageDestinationFinalize(destination)
@@ -155,8 +214,9 @@ for row in 0..<rows {
     let folderURL = outputURL.appendingPathComponent(folder, isDirectory: true)
     try! FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
     for column in 0..<columns {
-        let centerX = leftInset + cellWidth * (CGFloat(column) + 0.5) - 10
-        let centerY = topInset + cellHeight * (CGFloat(row) + 0.5) + (height > 800 ? 16 : 2)
+        let columnOffset: CGFloat = assetPrefix == "belle" ? 15 : -10
+        let centerX = leftInset + cellWidth * (CGFloat(column) + 0.5) + columnOffset
+        let centerY = topInset + cellHeight * (CGFloat(row) + 0.5) + (height > 800 ? 6 : 2)
         let crop = CGRect(x: max(0, centerX - cropWidth / 2), y: max(0, centerY - cropHeight / 2), width: cropWidth, height: cropHeight)
         let frame = transparent(sourceCG.cropping(to: crop)!)
         writeFrame(frame, to: folderURL.appendingPathComponent("\(assetPrefix)_\(prefix)\(String(format: "%03d", column)).png"))
