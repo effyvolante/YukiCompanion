@@ -38,7 +38,7 @@ private struct SetupGuideView: View {
                 SetupStep(number: 3, title: "Allow Accessibility", detail: "This enables keyboard-assisted and legacy ChatGPT controls. Chrome extension sync works without it.", buttonTitle: "Open Accessibility") {
                     AppDelegate.openAccessibilitySettings()
                 }
-                SetupStep(number: 4, title: "Install the Yuki Chrome extension", detail: "Download the repository ZIP using Code → Download ZIP and extract it. Follow ChromeExtension/README.md: type chrome://extensions into Chrome, enable Developer mode, then Load unpacked → ChromeExtension. Sign into GitHub to access this private repository.", buttonTitle: "Get extension from repository") {
+                SetupStep(number: 4, title: "Install the Yuki Chrome extension", detail: "Download the repository ZIP using Code → Download ZIP and extract it. Follow ChromeExtension/README.md: type chrome://extensions into Chrome, enable Developer mode, then Load unpacked → ChromeExtension.", buttonTitle: "Get extension from repository") {
                     open("https://github.com/effyvolante/YukiCompanion/tree/main/ChromeExtension")
                 }
                 SetupStep(number: 5, title: "Bind your App Companion chat", detail: "Open ‘\(settings.chromeConversation)’ in ChatGPT, click the Yuki extension, and choose Bind this tab to Yuki.", buttonTitle: "Open ChatGPT") {

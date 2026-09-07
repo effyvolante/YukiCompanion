@@ -144,7 +144,7 @@ private struct YukiMenuView: View {
             }
             .buttonStyle(.plain)
             Button(action: onProvideFeedback) {
-                MenuLabel(title: "Send feedback", detail: "Open the private feedback form")
+                MenuLabel(title: "Send feedback", detail: "Open the public feedback form")
             }
             .buttonStyle(.plain)
             Button(action: onCheckWorkChat) {

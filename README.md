@@ -21,12 +21,12 @@ Yuki checks the latest published release at [the YukiCompanion GitHub repository
 
 ## Feedback
 
-Choose **Send feedback** from Yuki’s chat menu. It opens the repository’s structured private feedback form so reports can be reviewed alongside the source and release history. Select **Essential functionality**, **Quality of life**, or **Design advice** and avoid including passwords or private conversation content.
+Choose **Send feedback** from Yuki’s chat menu. It opens the repository’s structured feedback form so reports can be reviewed alongside the source and release history. Issues are visible to the public, so avoid including passwords or private conversation content. Select **Essential functionality**, **Quality of life**, or **Design advice**.
 
 ## Build and launch
 
 ```bash
-cd /Users/jaybracewell/Documents/Codex/2026-09-05/pr
+cd YukiCompanion
 python3 Tools/build_yuki_app.py
 open "$HOME/Desktop/Yuki Companion.app"
 ```
