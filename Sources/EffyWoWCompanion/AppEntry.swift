@@ -116,7 +116,7 @@ struct EffyWoWCompanionApp: App {
                         return
                     }
                     imageData = capture.png
-                    outbound = "[Full World of Warcraft window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is only supplementary context: approximately \(Int(capture.cursor.normalizedX * 100))% from the left and \(Int(capture.cursor.normalizedY * 100))% from the top.]\n\(text)"
+                    outbound = "[Full \(settings.watchedApplication) window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is only supplementary context: approximately \(Int(capture.cursor.normalizedX * 100))% from the left and \(Int(capture.cursor.normalizedY * 100))% from the top.]\n\(text)"
                 }
                 let reply = try await ChromeBridge.shared.send(outbound, imageData: imageData, onSubmitted: { [weak self] in
                     self?.returnFocusToWoW()
@@ -130,8 +130,13 @@ struct EffyWoWCompanionApp: App {
     }
 
     private func returnFocusToWoW() {
-        guard let wow = NSRunningApplication.runningApplications(withBundleIdentifier: "com.blizzard.worldofwarcraft").first else { return }
-        wow.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
+        let application: NSRunningApplication?
+        if settings.watchedApplication.caseInsensitiveCompare("World of Warcraft") == .orderedSame {
+            application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.blizzard.worldofwarcraft").first
+        } else {
+            application = NSWorkspace.shared.runningApplications.first { $0.localizedName?.caseInsensitiveCompare(settings.watchedApplication) == .orderedSame }
+        }
+        application?.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
     }
 
     private func checkWorkChat() {

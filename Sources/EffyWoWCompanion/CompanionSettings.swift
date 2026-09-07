@@ -51,7 +51,7 @@ struct CompanionSettingsView: View {
                 TextField("Watched application", text: $settings.watchedApplication)
                 TextField("Chrome conversation", text: $settings.chromeConversation)
                 Toggle("Look automatically for visual questions", isOn: $settings.automaticLook)
-                Text("Look capture is currently limited to the World of Warcraft window. Other application names are reserved for the generalized capture milestone.").font(.footnote).foregroundStyle(.secondary)
+                Text("Look captures only the selected application’s visible window, never the desktop. Screen Recording permission is required.").font(.footnote).foregroundStyle(.secondary)
             }
             Section("Startup") { Toggle("Launch Yuki when I sign in", isOn: $settings.launchAtLogin); Toggle("Install updates automatically", isOn: $settings.automaticUpdates) }
             Text("Yuki uses your local Chrome extension and does not use a separate ChatGPT API.").font(.footnote).foregroundStyle(.secondary)

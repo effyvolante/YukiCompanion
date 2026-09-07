@@ -10,11 +10,17 @@ final class WoWScreenshotService {
         let cursor: CursorContext
     }
 
+    private let applicationName: String
+
+    init(applicationName: String = "World of Warcraft") {
+        self.applicationName = applicationName
+    }
+
     @MainActor
     func capture() -> Capture? {
-        guard let wow = WoWWindowManager().window(),
-              let image = CGWindowListCreateImage(.null, .optionIncludingWindow, wow.id, [.bestResolution, .boundsIgnoreFraming]),
+        guard let window = WoWWindowManager(applicationName: applicationName).window(),
+              let image = CGWindowListCreateImage(.null, .optionIncludingWindow, window.id, [.bestResolution, .boundsIgnoreFraming]),
               let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { return nil }
-        return Capture(png: png, cursor: CursorContext(global: NSEvent.mouseLocation, window: wow.bounds))
+        return Capture(png: png, cursor: CursorContext(global: NSEvent.mouseLocation, window: window.bounds))
     }
 }

@@ -7,10 +7,26 @@ struct WoWWindowManager {
         let bounds: CGRect
     }
 
+    private let applicationName: String
+
+    init(applicationName: String = "World of Warcraft") {
+        self.applicationName = applicationName
+    }
+
     func window() -> Window? {
-        guard let wow = NSRunningApplication.runningApplications(withBundleIdentifier: "com.blizzard.worldofwarcraft").first else { return nil }
+        let application: NSRunningApplication?
+        if applicationName.caseInsensitiveCompare("World of Warcraft") == .orderedSame {
+            // Preserve the known-good WoW lookup as the default path.
+            application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.blizzard.worldofwarcraft").first
+        } else {
+            application = NSWorkspace.shared.runningApplications.first { app in
+                app.activationPolicy != .prohibited &&
+                app.localizedName?.caseInsensitiveCompare(applicationName) == .orderedSame
+            }
+        }
+        guard let application else { return nil }
         let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        return (CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]])?.first(where: { ($0[kCGWindowOwnerPID as String] as? pid_t) == wow.processIdentifier }).flatMap { info in
+        return (CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]])?.first(where: { ($0[kCGWindowOwnerPID as String] as? pid_t) == application.processIdentifier }).flatMap { info in
             guard let id = info[kCGWindowNumber as String] as? CGWindowID,
                   let value = info[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = value["X"], let y = value["Y"],
