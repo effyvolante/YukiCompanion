@@ -23,7 +23,7 @@ public partial class SettingsWindow : Window
         AutomaticLookBox.IsChecked = configuration.AutomaticLook;
         LaunchAtLoginBox.IsChecked = configuration.LaunchAtLogin;
         AutomaticUpdatesBox.IsChecked = configuration.AutomaticUpdates;
-        ThemeBox.ItemsSource = new[] { new ThemeChoice("Yuki", "Yuki") };
+        ThemeBox.ItemsSource = ThemeChoice.All;
         ThemeBox.SelectedValue = configuration.ThemeId;
         RefreshApplicationList();
     }
@@ -92,5 +92,16 @@ public partial class SettingsWindow : Window
         catch { System.Windows.MessageBox.Show(fallback, Title); }
     }
 
-    private sealed record ThemeChoice(string Id, string Name);
+    private sealed record ThemeChoice(string Id, string Name)
+    {
+        public static readonly ThemeChoice[] All =
+        [
+            new("Yuki", "Yuki — Pink octopus"),
+            new("Mochi", "Mochi — Lavender axolotl"),
+            new("Pippin", "Pippin — Mint slime cat"),
+            new("Belle", "Belle — Golden bee"),
+            new("Peaches", "Peaches — Cream bunny"),
+            new("Nova", "Nova — Lavender baby dragon")
+        ];
+    }
 }

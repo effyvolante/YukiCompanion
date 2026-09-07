@@ -106,7 +106,7 @@ final class SettingsWindowController {
         chatPanel.hasShadow = true
         chatPanel.isReleasedWhenClosed = false
 
-        let dragView = YukiDragView(rootView: PetView(model: model))
+        let dragView = YukiDragView(rootView: PetView(model: model, settings: settings))
         dragView.clicked = { [weak self] in self?.toggleBubble() }
         dragView.moved = { [weak self] in self?.savePetFrame(); self?.repositionBubble() }
         dragView.resized = { [weak self] delta in self?.resizePet(by: delta) }
@@ -230,17 +230,21 @@ final class SettingsWindowController {
     private func persist() { if let data = try? JSONEncoder().encode(Array(messages.suffix(200))) { UserDefaults.standard.set(data, forKey: "yuki.messages") } }
 }
 
-enum PetState { case idle, clicked, capturing, opening, waiting, replying, ready, error }
+enum PetState { case idle, clicked, capturing, opening, waiting, replying, ready, error, hover, look, answerStart, answerComplete, rareIdleA, rareIdleB }
 
 @MainActor struct PetView: View {
     @ObservedObject var model: CompanionModel
+    @ObservedObject var settings: CompanionSettings
     @StateObject private var animator = SpriteAnimationController()
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             if let image = animator.image { Image(nsImage: image).resizable().interpolation(.high).scaledToFit().padding(2) } else { Color.clear }
             Image(systemName: "arrow.down.right.and.arrow.up.left").font(.system(size: 7, weight: .bold)).foregroundStyle(.pink.opacity(0.65)).padding(4).allowsHitTesting(false)
         }
-        .contentShape(Rectangle()).onChange(of: model.state) { animator.set($0) }.onAppear { animator.set(model.state) }
+        .contentShape(Rectangle())
+        .onChange(of: model.state) { animator.set($0, themeID: settings.themeID) }
+        .onChange(of: settings.themeID) { _ in animator.set(.idle, themeID: settings.themeID) }
+        .onAppear { animator.set(model.state, themeID: settings.themeID) }
     }
 }
 

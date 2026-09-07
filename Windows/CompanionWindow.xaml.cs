@@ -11,6 +11,8 @@ public partial class CompanionWindow : Window
     private readonly WatchedWindowService windows = new();
     private SettingsWindow? settingsWindow;
     public event Action<string>? VisualStateChanged;
+    public event Action<string>? ThemeChanged;
+    public string ThemeId => configuration.ThemeId;
     public CompanionWindow(CompanionConfiguration configuration)
     {
         InitializeComponent();
@@ -112,6 +114,7 @@ public partial class CompanionWindow : Window
         Title = configuration.CompanionDisplayName;
         CompanionName.Text = configuration.CompanionDisplayName;
         Status.Text = "ready";
+        ThemeChanged?.Invoke(configuration.ThemeId);
     }
 
     private void AppendMessage(string role, string text, bool persist = true)

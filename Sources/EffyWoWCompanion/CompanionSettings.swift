@@ -52,9 +52,10 @@ struct CompanionSettingsView: View {
             Section("Companion") {
                 TextField("Name", text: $settings.companionDisplayName)
                 Picker("Theme", selection: $settings.themeID) {
-                    Text("Yuki").tag("Yuki")
+                    ForEach(CompanionTheme.all) { theme in
+                        Text("\(theme.displayName) — \(theme.description)").tag(theme.id)
+                    }
                 }
-                Text("More themes will appear here when available.").font(.footnote).foregroundStyle(.secondary)
             }
             Section("Context") {
                 HStack {

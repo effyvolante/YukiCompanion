@@ -19,5 +19,6 @@
   <ItemGroup>
     <None Include="..\PetAssets\Production\**\*.png" LinkBase="Assets\Yuki" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\PetAssets\Production\animations.json" Link="Assets\Yuki\animations.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\PetAssets\Themes\**\*.png" LinkBase="Assets\Themes" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
