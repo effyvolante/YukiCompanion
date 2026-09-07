@@ -10,7 +10,7 @@ namespace YukiCompanion.Windows;
 
 public static class UpdateService
 {
-    public const string CurrentVersion = "0.2.0";
+    public const string CurrentVersion = "0.2.1";
     public const string RepositoryUrl = "https://github.com/effyvolante/YukiCompanion";
     private const string ReleasesApi = "https://api.github.com/repos/effyvolante/YukiCompanion/releases/latest";
     private static readonly HttpClient Client = CreateClient();

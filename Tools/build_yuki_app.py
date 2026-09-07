@@ -12,7 +12,7 @@ shutil.copy2(binary_dir / 'EffyWoWCompanion', contents / 'MacOS' / 'EffyWoWCompa
 # SwiftPM's generated accessor resolves this bundle relative to Bundle.main.
 shutil.copytree(binary_dir / 'EffyWoWCompanion_EffyWoWCompanion.bundle', contents / 'Resources' / 'EffyWoWCompanion_EffyWoWCompanion.bundle', dirs_exist_ok=True)
 with (contents / 'Info.plist').open('wb') as f:
-    plistlib.dump(dict(CFBundleIdentifier='com.effy.wowcompanion', CFBundleName='Yuki Companion', CFBundleDisplayName='Yuki — App Companion', CFBundleExecutable='EffyWoWCompanion', CFBundlePackageType='APPL', CFBundleVersion='2', CFBundleShortVersionString='0.2.0', LSMinimumSystemVersion='13.0', NSHighResolutionCapable=True), f)
+    plistlib.dump(dict(CFBundleIdentifier='com.effy.wowcompanion', CFBundleName='Yuki Companion', CFBundleDisplayName='Yuki — App Companion', CFBundleExecutable='EffyWoWCompanion', CFBundlePackageType='APPL', CFBundleVersion='3', CFBundleShortVersionString='0.2.1', LSMinimumSystemVersion='13.0', NSHighResolutionCapable=True), f)
 subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(app)], check=True)
 # Keep the launch location used during local testing in sync with the packaged
 # build. This prevents accidentally launching an older binary with stale bridge
