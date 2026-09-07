@@ -1,4 +1,5 @@
 import Foundation
+import ServiceManagement
 import SwiftUI
 
 @MainActor
@@ -8,7 +9,7 @@ final class CompanionSettings: ObservableObject {
     @Published var themeID: String { didSet { save() } }
     @Published var watchedApplication: String { didSet { save() } }
     @Published var chromeConversation: String { didSet { save() } }
-    @Published var launchAtLogin: Bool { didSet { save() } }
+    @Published var launchAtLogin: Bool { didSet { save(); applyLaunchAtLogin() } }
     @Published var automaticLook: Bool { didSet { save() } }
     @Published var automaticUpdates: Bool { didSet { save() } }
 
@@ -29,6 +30,14 @@ final class CompanionSettings: ObservableObject {
         defaults.set(companionDisplayName, forKey: Key.name); defaults.set(themeID, forKey: Key.theme)
         defaults.set(watchedApplication, forKey: Key.watched); defaults.set(chromeConversation, forKey: Key.conversation)
         defaults.set(launchAtLogin, forKey: Key.launch); defaults.set(automaticLook, forKey: Key.look); defaults.set(automaticUpdates, forKey: Key.updates)
+    }
+
+    private func applyLaunchAtLogin() {
+        // SMAppService requires a packaged app bundle. Source-run builds keep
+        // the preference and simply wait until the distributed app is bundled.
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return }
+        if launchAtLogin { try? SMAppService.mainApp.register() }
+        else { try? SMAppService.mainApp.unregister() }
     }
 }
 
