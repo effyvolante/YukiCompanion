@@ -19,7 +19,7 @@ final class CompanionSettings: ObservableObject {
     private init() {
         companionDisplayName = defaults.string(forKey: Key.name) ?? "Yuki"
         themeID = defaults.string(forKey: Key.theme) ?? "Yuki"
-        watchedApplication = defaults.string(forKey: Key.watched) ?? "World of Warcraft"
+        watchedApplication = defaults.string(forKey: Key.watched) ?? ""
         let savedConversation = defaults.string(forKey: Key.conversation)
         chromeConversation = savedConversation == "Yuki — WoW Companion" ? "Yuki — App Companion" : (savedConversation ?? "Yuki — App Companion")
         launchAtLogin = defaults.bool(forKey: Key.launch)
@@ -70,7 +70,7 @@ struct CompanionSettingsView: View {
                 Toggle("Look automatically for visual questions", isOn: $settings.automaticLook)
                 Text("Look captures only the selected application’s visible window, never the desktop. Screen Recording permission is required.").font(.footnote).foregroundStyle(.secondary)
             }
-            Section("Startup") { Toggle("Launch Yuki when I sign in", isOn: $settings.launchAtLogin); Toggle("Install updates automatically", isOn: $settings.automaticUpdates) }
+            Section("Startup") { Toggle("Launch Yuki when I sign in", isOn: $settings.launchAtLogin); Toggle("Check for updates automatically", isOn: $settings.automaticUpdates) }
             Text("Yuki uses your local Chrome extension and does not use a separate ChatGPT API.").font(.footnote).foregroundStyle(.secondary)
         }.formStyle(.grouped).frame(width: 500).padding().onAppear(perform: refreshApplications)
     }

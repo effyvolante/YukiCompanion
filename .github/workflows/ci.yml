@@ -76,3 +76,25 @@ jobs:
       - name: Validate extension manifest and product assets
         run: python3 -c "import json; json.load(open('ChromeExtension/manifest.json')); json.load(open('Shared/Configuration/companion.schema.json')); json.load(open('PetAssets/Production/animations.json'))"
       - run: test -f ChromeExtension/manifest.json && test -f PetAssets/Production/animations.json && test -f Shared/Configuration/companion.schema.json
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows, integrity]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download packaged apps
+        uses: actions/download-artifact@v4
+        with:
+          pattern: YukiCompanion-*
+          path: release
+          merge-multiple: true
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release/YukiCompanion-macos.zip \
+            release/YukiCompanion-Windows.zip \
+            --title "Yuki Companion $GITHUB_REF_NAME" \
+            --generate-notes

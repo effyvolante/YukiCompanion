@@ -72,6 +72,8 @@ public partial class SettingsWindow : Window
 
     private void Cancel(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
 
+    private async void CheckForUpdates(object sender, RoutedEventArgs e) => await UpdateService.CheckAsync(manual: true, this);
+
     private void OpenChromeExtensions(object sender, RoutedEventArgs e)
     {
         try { Process.Start(new ProcessStartInfo { FileName = "chrome://extensions", UseShellExecute = true }); }

@@ -12,7 +12,7 @@ struct DeicticQuestionDetector {
         let s = text.lowercased().replacingOccurrences(of: "’", with: "'")
         if phrases.contains(where: s.contains) { return true }
 
-        // Broad observational questions should default to a WoW screenshot.
+        // Broad observational questions should default to an app-window screenshot.
         // This intentionally favors visual context over making the user repeat
         // a question when they are clearly asking about something on screen.
         let asksAboutVisibleThing = ["this", "that", "here", "there", "person", "guy", "npc", "object", "thing", "item", "icon", "mount", "quest", "doing", "next to me"]

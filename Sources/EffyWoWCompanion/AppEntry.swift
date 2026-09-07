@@ -44,6 +44,7 @@ final class SettingsWindowController {
         overlay.show()
         showFirstRunGuidanceIfNeeded()
         showAccessibilityGuidanceIfNeeded()
+        if CompanionSettings.shared.automaticUpdates { UpdateService.shared.check() }
     }
 
     private func showFirstRunGuidanceIfNeeded() {
@@ -103,7 +104,7 @@ final class SettingsWindowController {
         dragView.moved = { [weak self] in self?.savePetFrame(); self?.repositionBubble() }
         dragView.resized = { [weak self] delta in self?.resizePet(by: delta) }
         petPanel.contentView = dragView
-        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onClose: { [weak self] in self?.toggleBubble() }))
+        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onClose: { [weak self] in self?.toggleBubble() }))
 
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let saved = UserDefaults.standard.string(forKey: "yuki.petFrame").map(NSRectFromString)
@@ -144,22 +145,22 @@ final class SettingsWindowController {
 
     private func send() {
         guard let text = model.takeDraft() else { return }
-        let includeWoWView = model.includeWoWView || (settings.automaticLook && DeicticQuestionDetector.needsContext(text))
-        model.includeWoWView = false
+        let includeAppWindow = model.includeAppWindow || (settings.automaticLook && DeicticQuestionDetector.needsContext(text))
+        model.includeAppWindow = false
         model.append(.user, text); model.state = .waiting
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 var outbound = text
                 var imageData: Data?
-                if includeWoWView {
+                if includeAppWindow {
                     model.state = .capturing
                     guard CGPreflightScreenCaptureAccess() else {
                         model.append(.yuki, "Allow Yuki in System Settings → Privacy & Security → Screen Recording, then restart Yuki and try the eye button again.")
                         model.state = .error
                         return
                     }
-                    guard let capture = WoWScreenshotService(applicationName: settings.watchedApplication).capture() else {
+                    guard let capture = WindowScreenshotService(applicationName: settings.watchedApplication).capture() else {
                         model.append(.yuki, "I can’t see a visible window for \(settings.watchedApplication) right now. Open that app and keep a window visible, then try again.")
                         model.state = .error
                         return
@@ -168,7 +169,7 @@ final class SettingsWindowController {
                     outbound = "[Full \(settings.watchedApplication) window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is only supplementary context: approximately \(Int(capture.cursor.normalizedX * 100))% from the left and \(Int(capture.cursor.normalizedY * 100))% from the top.]\n\(text)"
                 }
                 let reply = try await ChromeBridge.shared.send(outbound, imageData: imageData, onSubmitted: { [weak self] in
-                    self?.returnFocusToWoW()
+                    self?.returnFocusToWatchedApplication()
                 }) { [weak model] in model?.state = .replying }
                 model.append(.yuki, reply); model.state = .ready
                 try? await Task.sleep(for: .milliseconds(900)); model.state = .idle
@@ -178,13 +179,8 @@ final class SettingsWindowController {
         }
     }
 
-    private func returnFocusToWoW() {
-        let application: NSRunningApplication?
-        if settings.watchedApplication.caseInsensitiveCompare("World of Warcraft") == .orderedSame {
-            application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.blizzard.worldofwarcraft").first
-        } else {
-            application = NSWorkspace.shared.runningApplications.first { $0.localizedName?.caseInsensitiveCompare(settings.watchedApplication) == .orderedSame }
-        }
+    private func returnFocusToWatchedApplication() {
+        let application = NSWorkspace.shared.runningApplications.first { $0.localizedName?.caseInsensitiveCompare(settings.watchedApplication) == .orderedSame }
         application?.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
     }
 
@@ -215,7 +211,7 @@ final class SettingsWindowController {
     @Published var draft = ""
     @Published var state: PetState = .idle
     @Published var focusComposer = 0
-    @Published var includeWoWView = false
+    @Published var includeAppWindow = false
     init() {
         if let data = UserDefaults.standard.data(forKey: "yuki.messages"), let saved = try? JSONDecoder().decode([YukiChatMessage].self, from: data) { messages = saved }
     }

@@ -17,4 +17,6 @@ Yuki discovers visible top-level windows and stores both the application process
 
 Settings are stored per user under `%APPDATA%\YukiCompanion\config.json`. The settings window can refresh the list of currently open applications and their windows, change the companion name/theme, choose the Chrome conversation label, and control Automatic Look and startup behavior.
 
+Yuki checks the latest published release on GitHub when it opens if **Check for updates automatically** is enabled. Use **Check now** in Settings to check immediately. When an update is found, Yuki opens the matching Windows ZIP download; close Yuki, replace the extracted app folder, and start the new copy.
+
 The Windows build targets .NET 8 WPF on Windows 10 version 1903 or later. The handoff ZIP is self-contained for `win-x64`, so testers do not need to install .NET separately. The GitHub Actions Windows job restores, builds, tests, and publishes this package on `windows-2022`.

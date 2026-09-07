@@ -9,12 +9,15 @@ No OpenAI API key, API billing, private endpoint, cookie access, or credential e
 ## Requirements
 
 - macOS 13+
-- World of Warcraft Retail
 - Google Chrome
 - ChatGPT open in Chrome and logged in
 - Xcode 15+ or Swift command-line tools
 
 For Windows, use the `YukiCompanion-windows` artifact from a green GitHub Actions run. It is a self-contained `win-x64` WPF package for Windows 10 version 1903 or later and includes the shared `ChromeExtension` folder plus its installation guide.
+
+## Updates
+
+Yuki checks the latest published release at [the YukiCompanion GitHub repository](https://github.com/effyvolante/YukiCompanion) when the app opens. The check is enabled by default and can be disabled in Settings. The menu’s **Check for updates** action runs the check immediately and opens the matching platform download when one is available. Updates are user-confirmed: quit Yuki, replace the old app with the downloaded package, and relaunch it.
 
 ## Build and launch
 
@@ -43,7 +46,7 @@ The package includes the SwiftPM executable, Yuki animation resources, a valid a
 4. Select this project’s `ChromeExtension` folder.
 5. In Chrome, open the existing **Yuki — App Companion** conversation.
 6. Click the Yuki extension icon and choose **Bind this tab to Yuki**.
-7. Leave Chrome open and unminimized on another Desktop/Space while WoW is fullscreen elsewhere.
+7. Leave Chrome open and unminimized on another Desktop/Space while the selected app is visible elsewhere.
 
 Then open Yuki’s bubble and send `hello yuki`.
 
@@ -59,4 +62,4 @@ Screen Recording is required for the screenshot/Look feature. Yuki captures only
 - **Message box not found:** refresh the ChatGPT tab, confirm it is the Yuki App Companion chat, then bind the tab again.
 - **ChatGPT changed its layout:** the extension’s DOM selectors may need a small update; no API key or account reset is required.
 
-Yuki does not automate WoW, inspect process memory, inject code, press abilities, or send gameplay input.
+Yuki does not automate the tracked app, inspect process memory, inject code, press buttons, or send application input.

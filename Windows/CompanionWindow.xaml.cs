@@ -31,6 +31,17 @@ public partial class CompanionWindow : Window
 
     private void Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
     private async void Send(object sender, RoutedEventArgs e) => await SendMessageAsync();
+    private void OpenMenu(object sender, RoutedEventArgs e) { MenuButton.ContextMenu!.IsOpen = true; }
+    private void OpenSetup(object sender, RoutedEventArgs e)
+    {
+        MenuButton.ContextMenu!.IsOpen = false;
+        new SetupWindow(configuration) { Owner = this }.ShowDialog();
+    }
+    private async void CheckForUpdates(object sender, RoutedEventArgs e)
+    {
+        MenuButton.ContextMenu!.IsOpen = false;
+        await UpdateService.CheckAsync(manual: true, this);
+    }
     private async void Look(object sender, RoutedEventArgs e)
     {
         const string prompt = "What's this?";

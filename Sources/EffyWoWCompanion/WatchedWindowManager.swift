@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 
-struct WoWWindowManager {
+struct WatchedWindowManager {
     struct Window {
         let id: CGWindowID
         let bounds: CGRect
@@ -9,22 +9,15 @@ struct WoWWindowManager {
 
     private let applicationName: String
 
-    init(applicationName: String = "World of Warcraft") {
+    init(applicationName: String) {
         self.applicationName = applicationName
     }
 
     func window() -> Window? {
-        let application: NSRunningApplication?
-        if applicationName.caseInsensitiveCompare("World of Warcraft") == .orderedSame {
-            // Preserve the known-good WoW lookup as the default path.
-            application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.blizzard.worldofwarcraft").first
-        } else {
-            application = NSWorkspace.shared.runningApplications.first { app in
-                app.activationPolicy != .prohibited &&
-                app.localizedName?.caseInsensitiveCompare(applicationName) == .orderedSame
-            }
-        }
-        guard let application else {
+        guard let application = NSWorkspace.shared.runningApplications.first(where: { app in
+            app.activationPolicy != .prohibited &&
+            app.localizedName?.caseInsensitiveCompare(applicationName) == .orderedSame
+        }) else {
             NSLog("[YukiCapture] no running application matched '%@'", applicationName)
             return nil
         }

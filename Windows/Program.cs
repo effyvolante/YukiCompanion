@@ -22,5 +22,6 @@ public partial class App : System.Windows.Application
         window.Hide();
         var pet = new PetWindow(window);
         pet.Show();
+        if (configuration.AutomaticUpdates) _ = UpdateService.CheckAsync(manual: false, window);
     }
 }

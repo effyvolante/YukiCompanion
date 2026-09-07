@@ -3,9 +3,9 @@
   "companionDisplayName": "Yuki",
   "themeId": "Yuki",
   "watchedApplication": {
-    "displayName": "World of Warcraft",
+    "displayName": "Finder",
     "platform": "macOS",
-    "identifier": "com.blizzard.worldofwarcraft",
+    "identifier": "com.apple.finder",
     "windowIdentifier": null
   },
   "companion": { "size": 180, "bubbleWidth": 360, "position": null },

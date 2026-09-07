@@ -43,7 +43,10 @@
         <GroupBox Header="Startup" Foreground="#FF9BC5" Padding="14">
           <StackPanel>
             <CheckBox x:Name="LaunchAtLoginBox" Content="Launch Yuki when I sign in" Margin="0,4,0,12"/>
-            <CheckBox x:Name="AutomaticUpdatesBox" Content="Install updates automatically"/>
+            <StackPanel Orientation="Horizontal">
+              <CheckBox x:Name="AutomaticUpdatesBox" Content="Check for updates automatically" VerticalAlignment="Center"/>
+              <Button Content="Check now" Click="CheckForUpdates" Margin="14,0,0,0"/>
+            </StackPanel>
           </StackPanel>
         </GroupBox>
       </StackPanel>

@@ -14,15 +14,17 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
     var companionName = "Yuki"
     let onSend: () -> Void
     let onCheckWorkChat: () -> Void
+    let onCheckForUpdates: () -> Void
     let onClose: () -> Void
     @State private var showMenu = false
 
-    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onClose: @escaping () -> Void) {
+    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onCheckForUpdates: @escaping () -> Void = {}, onClose: @escaping () -> Void) {
         self.model = model
         self.settings = settings
         self.companionName = companionName
         self.onSend = onSend
         self.onCheckWorkChat = onCheckWorkChat
+        self.onCheckForUpdates = onCheckForUpdates
         self.onClose = onClose
     }
 
@@ -43,9 +45,12 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                     YukiMenuView(model: model, settings: settings, onCheckWorkChat: {
                         showMenu = false
                         onCheckWorkChat()
+                    }, onCheckForUpdates: {
+                        showMenu = false
+                        onCheckForUpdates()
                     })
                 }
-                Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s Work chat")
+                Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s App Companion chat")
                 Button("×", action: onClose).buttonStyle(.plain).font(.title2)
             }.padding(.horizontal, 14).padding(.vertical, 10)
             Divider().overlay(Color.pink.opacity(0.35))
@@ -67,13 +72,13 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
             }
             Divider().overlay(Color.pink.opacity(0.35))
             HStack(alignment: .bottom, spacing: 8) {
-                Button(action: { model.includeWoWView.toggle() }) {
-                    Image(systemName: model.includeWoWView ? "eye.fill" : "eye")
+                Button(action: { model.includeAppWindow.toggle() }) {
+                    Image(systemName: model.includeAppWindow ? "eye.fill" : "eye")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(model.includeWoWView ? .pink : .secondary)
+                        .foregroundStyle(model.includeAppWindow ? .pink : .secondary)
                 }
                 .buttonStyle(.plain)
-                .help(model.includeWoWView ? "WoW view will be attached" : "Attach the current WoW view")
+                .help(model.includeAppWindow ? "App window will be attached" : "Attach the selected app window")
                 ComposerTextView(text: $model.draft, focusToken: model.focusComposer, onSend: onSend).frame(minHeight: 38, maxHeight: 92)
                 Button(action: onSend) { Image(systemName: "arrow.up.circle.fill").font(.title2).foregroundStyle(.pink) }.buttonStyle(.plain).help("Send")
             }.padding(10)
@@ -91,6 +96,7 @@ private struct YukiMenuView: View {
     @ObservedObject var model: CompanionModel
     @ObservedObject var settings: CompanionSettings
     let onCheckWorkChat: () -> Void
+    let onCheckForUpdates: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -109,7 +115,7 @@ private struct YukiMenuView: View {
                 MenuLabel(title: "Launch at login", detail: "Start Yuki when you sign in")
             }
             Button {
-                model.includeWoWView = true
+                model.includeAppWindow = true
             } label: {
                 MenuLabel(title: "Attach app window", detail: settings.watchedApplication)
             }
@@ -125,6 +131,10 @@ private struct YukiMenuView: View {
                 AppDelegate.openAccessibilitySettings()
             } label: {
                 MenuLabel(title: "Accessibility permission", detail: AXIsProcessTrusted() ? "Enabled" : "Needs re-authorization")
+            }
+            .buttonStyle(.plain)
+            Button(action: onCheckForUpdates) {
+                MenuLabel(title: "Check for updates", detail: "Open the latest GitHub release")
             }
             .buttonStyle(.plain)
             Button(action: onCheckWorkChat) {

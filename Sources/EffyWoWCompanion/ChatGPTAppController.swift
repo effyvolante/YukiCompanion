@@ -63,7 +63,7 @@ import ApplicationServices
         var submissionComposer = composer
         var exactTextReady = setComposerTextExactly(message, composer: composer)
         if !exactTextReady {
-            // ChatGPT's web composer may reject AXValue while it is behind WoW.
+            // ChatGPT's web composer may reject AXValue while it is behind another app.
             // Briefly activate only to obtain a verified focused composer; the
             // previous foreground app is restored immediately after submission.
             app.unhide()
