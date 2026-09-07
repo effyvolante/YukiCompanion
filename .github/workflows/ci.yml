@@ -34,8 +34,6 @@ jobs:
           pkgutil --payload-files "$RUNNER_TEMP/YukiCompanion-Gladys-macos/YukiCompanion-Gladys-macos.pkg" | grep -F "Applications/Yuki Companion.app/Contents/MacOS/EffyWoWCompanion"
           pkgutil --payload-files "$RUNNER_TEMP/YukiCompanion-Gladys-macos/YukiCompanion-Gladys-macos.pkg" | grep -F "Library/Application Support/Yuki Companion/ChromeExtension/manifest.json"
           test -f "$RUNNER_TEMP/YukiCompanion-Gladys-macos/README-Gladys.md"
-      - name: Archive Gladys macOS installer
-        run: cp "$RUNNER_TEMP/YukiCompanion-Gladys-macos/../YukiCompanion-Gladys-macos.zip" "$RUNNER_TEMP/YukiCompanion-Gladys-macos.zip"
       - name: Upload Gladys macOS handoff artifact
         uses: actions/upload-artifact@v4
         with:
