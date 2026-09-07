@@ -1,3 +1,23 @@
-<Window x:Class="YukiCompanion.Windows.SetupWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Set up Yuki Companion" Width="520" Height="330" WindowStartupLocation="CenterScreen">
-  <Grid Margin="28"><Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions><StackPanel><TextBlock x:Name="StepTitle" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,12"/><TextBlock x:Name="StepBody" TextWrapping="Wrap" Margin="0,0,0,16"/><TextBox x:Name="NameBox" Visibility="Collapsed" FontSize="16"/><ComboBox x:Name="WindowBox" Visibility="Collapsed" DisplayMemberPath="Title" FontSize="16"/></StackPanel><Button Grid.Row="1" Content="Continue" HorizontalAlignment="Right" Padding="22,8" Click="Next"/></Grid>
+<Window x:Class="YukiCompanion.Windows.SetupWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Get started with Yuki Companion" Width="590" Height="440" WindowStartupLocation="CenterScreen" Background="#24131D" Foreground="#FFF3F8">
+  <Window.Resources>
+    <Style TargetType="Button"><Setter Property="Padding" Value="14,8"/><Setter Property="Margin" Value="0,0,8,0"/></Style>
+    <Style TargetType="TextBox"><Setter Property="Padding" Value="9,7"/><Setter Property="Background" Value="#38202E"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#C95A8B"/></Style>
+    <Style TargetType="ComboBox"><Setter Property="Padding" Value="7"/><Setter Property="Background" Value="#38202E"/><Setter Property="Foreground" Value="#20101A"/></Style>
+  </Window.Resources>
+  <Grid Margin="30">
+    <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <StackPanel>
+      <TextBlock Text="Yuki Companion" FontSize="14" Foreground="#FF8FBE"/>
+      <TextBlock x:Name="StepTitle" FontSize="27" FontWeight="SemiBold" Margin="0,7,0,14"/>
+      <TextBlock x:Name="StepBody" TextWrapping="Wrap" Foreground="#DAB9C9" Margin="0,0,0,18"/>
+      <TextBox x:Name="NameBox" Visibility="Collapsed" FontSize="16"/>
+      <ComboBox x:Name="ApplicationBox" Visibility="Collapsed" DisplayMemberPath="DisplayName" SelectionChanged="ApplicationChanged" FontSize="16"/>
+      <ComboBox x:Name="WindowBox" Visibility="Collapsed" DisplayMemberPath="Title" FontSize="16" Margin="0,10,0,0"/>
+      <Button x:Name="ChromeButton" Content="Open Chrome extensions" Visibility="Collapsed" HorizontalAlignment="Left" Click="OpenChromeExtensions"/>
+    </StackPanel>
+    <DockPanel Grid.Row="1" LastChildFill="False" Margin="0,20,0,0">
+      <Button x:Name="BackButton" Content="Back" Visibility="Collapsed" Click="Back"/>
+      <Button x:Name="NextButton" DockPanel.Dock="Right" Content="Continue" Background="#F25A9D" Foreground="White" Padding="24,9" Click="Next"/>
+    </DockPanel>
+  </Grid>
 </Window>

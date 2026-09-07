@@ -10,6 +10,8 @@
     <RootNamespace>YukiCompanion.Windows</RootNamespace>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>AnyCPU</Platforms>
+    <EnableDefaultApplicationDefinition>true</EnableDefaultApplicationDefinition>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\PetAssets\Production\**\*.png" LinkBase="Assets\Yuki" CopyToOutputDirectory="PreserveNewest" />

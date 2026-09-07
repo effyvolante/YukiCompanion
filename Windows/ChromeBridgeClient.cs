@@ -16,6 +16,8 @@ public sealed class ChromeBridgeClient : IDisposable
     private readonly object gate = new();
     private readonly string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     public event Action<string>? ReplyReceived;
+    public event Action? ReplySubmitted;
+    public event Action<string>? ReplyUpdated;
     public event Action<string>? ErrorReceived;
 
     public string SessionToken => token;
@@ -41,11 +43,13 @@ public sealed class ChromeBridgeClient : IDisposable
     }
     private async Task ServeAsync()
     {
-        while (listener.IsListening) { try { var context = await listener.GetContextAsync(); _ = HandleAsync(context); } catch (HttpListenerException) { break; } }
+        while (listener.IsListening) { try { var context = await listener.GetContextAsync(); _ = HandleAsync(context); } catch (HttpListenerException) { break; } catch (ObjectDisposedException) { break; } }
     }
     private async Task HandleAsync(HttpListenerContext context)
     {
-        context.Response.Headers["Access-Control-Allow-Origin"] = "*"; context.Response.Headers["Access-Control-Allow-Headers"] = "content-type, x-yuki-bridge-token";
+        context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "content-type, x-yuki-bridge-token";
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
         object? result = null;
         byte[]? binary = null;
         if (context.Request.HttpMethod == "OPTIONS") context.Response.StatusCode = 204;
@@ -60,7 +64,12 @@ public sealed class ChromeBridgeClient : IDisposable
         else if (context.Request.HttpMethod == "POST" && context.Request.Url?.AbsolutePath == "/events" && Authorized(context))
         {
             using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8); var value = JsonSerializer.Deserialize<BridgeEvent>(await reader.ReadToEndAsync(), JsonOptions);
-            if (value?.Id is not null && value.Type is ("response_complete" or "error")) lock (gate) { if (pending.TryGetValue(value.Id, out var waiter)) waiter.TrySetResult(value); }
+            if (value?.Id is not null)
+            {
+                if (value.Type == "status" && string.Equals(value.State, "submitted", StringComparison.OrdinalIgnoreCase)) ReplySubmitted?.Invoke();
+                if (value.Type == "response_update") ReplyUpdated?.Invoke(value.Text ?? "");
+                if (value.Type is ("response_complete" or "error")) lock (gate) { if (pending.TryGetValue(value.Id, out var waiter)) waiter.TrySetResult(value); }
+            }
             result = new { ok = true };
         }
         else { context.Response.StatusCode = (context.Request.Url?.AbsolutePath is "/commands" or "/events" || context.Request.Url?.AbsolutePath.StartsWith("/context/", StringComparison.Ordinal) == true) ? 401 : 404; result = new { error = "not found" }; }
@@ -70,5 +79,5 @@ public sealed class ChromeBridgeClient : IDisposable
     }
     private bool Authorized(HttpListenerContext context) => context.Request.Headers["X-Yuki-Bridge-Token"] == token;
     public void Dispose() { if (listener.IsListening) listener.Stop(); listener.Close(); }
-    private sealed record BridgeEvent(string? Type, string? Id, string? Text, string? Message);
+    private sealed record BridgeEvent(string? Type, string? Id, string? Text, string? Message, string? State);
 }

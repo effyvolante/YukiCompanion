@@ -19,5 +19,8 @@ public partial class App : System.Windows.Application
         var window = new CompanionWindow(configuration);
         MainWindow = window;
         window.Show();
+        window.Hide();
+        var pet = new PetWindow(window);
+        pet.Show();
     }
 }

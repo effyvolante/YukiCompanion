@@ -9,6 +9,8 @@ xcuserdata/
 
 # Packaged/local build outputs
 outputs/
+dist/
+.build-package*/
 
 # Python cache
 __pycache__/

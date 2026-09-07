@@ -8,6 +8,7 @@ public sealed class CompanionConfiguration
     public int SchemaVersion { get; set; } = 1;
     public string CompanionDisplayName { get; set; } = "Yuki";
     public string ThemeId { get; set; } = "Yuki";
+    public string ChromeConversation { get; set; } = "Yuki — App Companion";
     public WatchedApplication? WatchedApplication { get; set; }
     public double Size { get; set; } = 180;
     public double BubbleWidth { get; set; } = 360;
@@ -15,6 +16,7 @@ public sealed class CompanionConfiguration
     public bool LaunchAtLogin { get; set; }
     public bool AutomaticLook { get; set; }
     public bool AutomaticUpdates { get; set; } = true;
+    public List<CompanionMessage> Messages { get; set; } = [];
 
     private static string Path => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "YukiCompanion", "config.json");
 
@@ -30,6 +32,12 @@ public sealed class CompanionConfiguration
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
         File.WriteAllText(Path, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
+}
+
+public sealed class CompanionMessage
+{
+    public string Role { get; set; } = "yuki";
+    public string Text { get; set; } = "";
 }
 
 public sealed class WatchedApplication

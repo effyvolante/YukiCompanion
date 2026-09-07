@@ -42,6 +42,19 @@ jobs:
         run: dotnet build Windows.Tests/Windows.Tests.csproj --configuration Release --no-restore
       - name: Run Windows bridge tests
         run: dotnet test Windows.Tests/Windows.Tests.csproj --configuration Release --no-build --no-restore --logger "console;verbosity=normal"
+      - name: Publish Windows handoff package
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:RUNNER_TEMP "YukiCompanion-Windows"
+          dotnet publish Windows/YukiCompanion.Windows.csproj --configuration Release --no-restore --self-contained false --output $publish
+          Copy-Item ChromeExtension (Join-Path $publish "ChromeExtension") -Recurse -Force
+          Copy-Item Windows/README.md (Join-Path $publish "README-Windows.md") -Force
+          Compress-Archive -Path (Join-Path $publish "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "YukiCompanion-Windows.zip") -Force
+      - name: Upload Windows app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YukiCompanion-windows
+          path: ${{ runner.temp }}/YukiCompanion-Windows.zip
   integrity:
     runs-on: ubuntu-latest
     steps:
