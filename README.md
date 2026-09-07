@@ -1,6 +1,6 @@
 # Yuki Companion
 
-Yuki is the default theme for Yuki Companion, a tiny pink companion that uses your normal logged-in ChatGPT account through a ChatGPT tab in Google Chrome. The Chrome tab is the backend; Yuki’s pink bubble remains the visible chat interface.
+Yuki is the default theme for Yuki Companion, a tiny pink companion that uses your normal logged-in ChatGPT account through a ChatGPT tab in Google Chrome or Microsoft Edge. The browser tab is the backend; Yuki’s pink bubble remains the visible chat interface.
 
 The current known-good implementation is the macOS app in `Sources/EffyWoWCompanion`. Windows development is isolated under `Windows/`; shared contracts live under `Shared/`. The macOS app remains the compatibility reference and is not rewritten as part of the cross-platform work.
 
@@ -9,11 +9,11 @@ No OpenAI API key, API billing, private endpoint, cookie access, or credential e
 ## Requirements
 
 - macOS 13+
-- Google Chrome
+- Google Chrome or Microsoft Edge
 - ChatGPT open in Chrome and logged in
 - Xcode 15+ or Swift command-line tools
 
-For Windows, use the `YukiCompanion-windows` artifact from a green GitHub Actions run. It is a self-contained `win-x64` WPF package for Windows 10 version 1903 or later and includes the shared `ChromeExtension` folder plus its installation guide.
+For Windows, use the `YukiCompanion-windows` artifact from a green GitHub Actions run. It is a self-contained `win-x64` WPF package for Windows 10 version 1903 or later and includes the shared `ChromeExtension` and `EdgeExtension` folders plus its installation guide.
 
 ## Updates
 
@@ -38,15 +38,15 @@ Yuki is a normal Dock application. Open **Yuki Companion → Settings…** or pr
 
 The package includes the SwiftPM executable, Yuki animation resources, a valid application manifest, and the screen-recording usage description.
 
-## One-time Chrome setup
+## One-time browser setup
 
-1. Open `chrome://extensions`.
+1. Open `chrome://extensions` in Chrome or `edge://extensions` in Edge.
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
-4. Select this project’s `ChromeExtension` folder.
-5. In Chrome, open the existing **Yuki — App Companion** conversation.
+4. Select the matching `ChromeExtension` or `EdgeExtension` folder.
+5. In your browser, open the existing **Yuki — App Companion** conversation.
 6. Click the Yuki extension icon and choose **Bind this tab to Yuki**.
-7. Leave Chrome open and unminimized on another Desktop/Space while the selected app is visible elsewhere.
+7. Leave the browser open and unminimized while the selected app is visible elsewhere.
 
 Then open Yuki’s bubble and send `hello yuki`.
 
