@@ -115,6 +115,12 @@ private struct YukiMenuView: View {
                 MenuLabel(title: "Settings…", detail: "Name, app, conversation, startup")
             }
             .buttonStyle(.plain)
+            Button {
+                AppDelegate.openAccessibilitySettings()
+            } label: {
+                MenuLabel(title: "Accessibility permission", detail: AXIsProcessTrusted() ? "Enabled" : "Needs re-authorization")
+            }
+            .buttonStyle(.plain)
             Button(action: onCheckWorkChat) {
                 MenuLabel(title: "Check Chrome binding", detail: settings.chromeConversation)
             }

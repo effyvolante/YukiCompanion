@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 
 @main @MainActor
@@ -25,6 +26,7 @@ struct EffyWoWCompanionApp: App {
         overlay = OverlayController(settings: CompanionSettings.shared)
         overlay.show()
         showFirstRunGuidanceIfNeeded()
+        showAccessibilityGuidanceIfNeeded()
     }
 
     private func showFirstRunGuidanceIfNeeded() {
@@ -38,6 +40,21 @@ struct EffyWoWCompanionApp: App {
             NSWorkspace.shared.open(url)
         }
         UserDefaults.standard.set(true, forKey: "yuki.onboarding.seen")
+    }
+
+    static func openAccessibilitySettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    private func showAccessibilityGuidanceIfNeeded() {
+        guard !AXIsProcessTrusted() else { return }
+        let alert = NSAlert()
+        alert.messageText = "Accessibility permission is off"
+        alert.informativeText = "Yuki needs Accessibility permission for keyboard-assisted and legacy ChatGPT controls. The normal Chrome extension connection still works without it. Re-enable Yuki in System Settings → Privacy & Security → Accessibility."
+        alert.addButton(withTitle: "Open Accessibility Settings")
+        alert.addButton(withTitle: "Not now")
+        if alert.runModal() == .alertFirstButtonReturn { Self.openAccessibilitySettings() }
     }
 }
 
