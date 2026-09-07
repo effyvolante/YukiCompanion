@@ -23,7 +23,7 @@ body:
     id: version
     attributes:
       label: App version
-      placeholder: e.g. 0.2.3
+      placeholder: e.g. 0.2.4
     validations:
       required: true
   - type: textarea

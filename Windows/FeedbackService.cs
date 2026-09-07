@@ -10,6 +10,6 @@ public static class FeedbackService
     public static void Open(Window owner)
     {
         try { Process.Start(new ProcessStartInfo { FileName = FeedbackUrl, UseShellExecute = true }); }
-        catch { MessageBox.Show(owner, "Open this address in your browser to send feedback:\n\n" + FeedbackUrl, "Yuki feedback", MessageBoxButton.OK, MessageBoxImage.Information); }
+        catch { System.Windows.MessageBox.Show(owner, "Open this address in your browser to send feedback:\n\n" + FeedbackUrl, "Yuki feedback", MessageBoxButton.OK, MessageBoxImage.Information); }
     }
 }
