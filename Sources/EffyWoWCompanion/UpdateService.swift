@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class UpdateService {
     static let shared = UpdateService()
-    static let currentVersion = "0.2.5"
+    static let currentVersion = "0.2.6"
     static let repositoryURL = URL(string: "https://github.com/effyvolante/YukiCompanion")!
     private static let releasesAPI = URL(string: "https://api.github.com/repos/effyvolante/YukiCompanion/releases/latest")!
 
@@ -63,7 +63,7 @@ final class UpdateService {
     private func showUpdateAlert(for release: Release) {
         let asset = release.assets.first { $0.name.lowercased().contains("macos") && $0.name.lowercased().hasSuffix(".zip") }
         let destination = asset?.browserDownloadURL ?? release.htmlURL
-        showAlert(message: "Yuki \(release.tagName) is available", detail: "Open GitHub to download the macOS update. Quit Yuki before replacing the app, then launch the new copy.", buttons: ["Open update", "Later"], openURL: destination)
+        showAlert(message: "Yuki \(release.tagName) is available", detail: "Download the matching macOS package from GitHub. Quit Yuki before replacing the app, then launch the new copy.", buttons: ["Download update", "Later"], openURL: destination)
     }
 
     private func showNoReleaseAlert() {

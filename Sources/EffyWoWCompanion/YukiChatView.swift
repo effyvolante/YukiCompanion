@@ -140,7 +140,7 @@ private struct YukiMenuView: View {
             }
             .buttonStyle(.plain)
             Button(action: onCheckForUpdates) {
-                MenuLabel(title: "Check for updates", detail: "Open the latest GitHub release")
+                MenuLabel(title: "Check for updates", detail: "Download the matching GitHub release")
             }
             .buttonStyle(.plain)
             Button(action: onProvideFeedback) {
@@ -181,13 +181,33 @@ private struct ComposerTextView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView(); scroll.drawsBackground = false; scroll.hasVerticalScroller = true
-        let view = NSTextView(); view.delegate = context.coordinator; view.isRichText = false; view.font = .systemFont(ofSize: 14)
-        view.textColor = .white; view.backgroundColor = NSColor.white.withAlphaComponent(0.08); view.textContainerInset = NSSize(width: 7, height: 7); view.string = text
+        let view = NSTextView(frame: .zero)
+        view.delegate = context.coordinator
+        view.isRichText = false
+        view.isEditable = true
+        view.isSelectable = true
+        view.font = .systemFont(ofSize: 14)
+        view.textColor = .white
+        view.insertionPointColor = .white
+        view.typingAttributes = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 14)]
+        view.backgroundColor = NSColor.white.withAlphaComponent(0.08)
+        view.drawsBackground = true
+        view.textContainerInset = NSSize(width: 7, height: 7)
+        view.textContainer?.widthTracksTextView = true
+        view.string = text
         scroll.documentView = view; context.coordinator.view = view; return scroll
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = context.coordinator.view else { return }
-        if view.string != text { view.string = text }
+        view.textColor = .white
+        view.insertionPointColor = .white
+        view.typingAttributes = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 14)]
+        if view.string != text {
+            let selectedRange = view.selectedRange()
+            view.string = text
+            let location = min(selectedRange.location, (text as NSString).length)
+            view.setSelectedRange(NSRange(location: location, length: 0))
+        }
         if context.coordinator.focusToken != focusToken {
             context.coordinator.focusToken = focusToken; DispatchQueue.main.async { view.window?.makeFirstResponder(view) }
         }
