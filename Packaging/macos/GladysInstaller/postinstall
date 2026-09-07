@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+extension_path="/Library/Application Support/Yuki Companion/ChromeExtension"
+app_path="/Applications/Yuki Companion.app"
+console_user="$(stat -f '%Su' /dev/console 2>/dev/null || true)"
+
+if [[ -z "$console_user" || "$console_user" == "root" || ! -d "/Users/$console_user" ]]; then
+  exit 0
+fi
+
+console_uid="$(id -u "$console_user")"
+
+as_console_user() {
+  launchctl asuser "$console_uid" sudo -u "$console_user" "$@"
+}
+
+# Chrome does not permit a normal installer to silently install an unpacked
+# extension. Open both the browser page and the exact folder so the user only
+# has to enable Developer mode and confirm Load unpacked.
+as_console_user /usr/bin/open -a "Google Chrome" "chrome://extensions" || true
+as_console_user /usr/bin/open "$extension_path" || true
+
+as_console_user /usr/bin/osascript <<'APPLESCRIPT' || true
+tell application "System Events"
+    display dialog "Yuki Companion is installed in Applications.\n\nChrome is open with the extension folder selected. In chrome://extensions, turn on Developer mode, choose Load unpacked, and select the opened ChromeExtension folder. Then open Yuki and follow Get started." buttons {"OK"} default button "OK" with title "Yuki Companion setup"
+end tell
+APPLESCRIPT
+
+# Launching the app is intentionally best-effort: macOS may still need to
+# finish registering the newly installed bundle before open can resolve it.
+as_console_user /usr/bin/open "$app_path" || true

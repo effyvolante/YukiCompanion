@@ -11,6 +11,7 @@ xcuserdata/
 outputs/
 dist/
 .build-package*/
+.build-gladys*/
 
 # Python cache
 __pycache__/

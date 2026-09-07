@@ -27,6 +27,22 @@ jobs:
         with:
           name: YukiCompanion-macos
           path: ${{ runner.temp }}/YukiCompanion-macos.zip
+      - name: Package Gladys macOS installer
+        run: bash scripts/package-macos-gladys.sh "$RUNNER_TEMP/yuki-gladys-package" "$RUNNER_TEMP/YukiCompanion-Gladys-macos"
+      - name: Verify Gladys macOS installer payload
+        run: |
+          pkgutil --payload-files "$RUNNER_TEMP/YukiCompanion-Gladys-macos/YukiCompanion-Gladys-macos.pkg" | grep -F "Applications/Yuki Companion.app/Contents/MacOS/EffyWoWCompanion"
+          pkgutil --payload-files "$RUNNER_TEMP/YukiCompanion-Gladys-macos/YukiCompanion-Gladys-macos.pkg" | grep -F "Library/Application Support/Yuki Companion/ChromeExtension/manifest.json"
+          test -f "$RUNNER_TEMP/YukiCompanion-Gladys-macos/README-Gladys.md"
+      - name: Archive Gladys macOS installer
+        run: cp "$RUNNER_TEMP/YukiCompanion-Gladys-macos/../YukiCompanion-Gladys-macos.zip" "$RUNNER_TEMP/YukiCompanion-Gladys-macos.zip"
+      - name: Upload Gladys macOS handoff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YukiCompanion-Gladys-macos
+          path: |
+            ${{ runner.temp }}/YukiCompanion-Gladys-macos.zip
+            ${{ runner.temp }}/YukiCompanion-Gladys-macos/YukiCompanion-Gladys-macos.dmg
   windows:
     runs-on: windows-2022
     steps:
@@ -100,6 +116,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             release/YukiCompanion-macos.zip \
+            release/YukiCompanion-Gladys-macos.zip \
             release/YukiCompanion-Windows.zip \
             --title "Yuki Companion $GITHUB_REF_NAME" \
             --generate-notes
