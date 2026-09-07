@@ -4,13 +4,23 @@ import SwiftUI
 @main @MainActor
 struct EffyWoWCompanionApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    var body: some Scene { Settings { CompanionSettingsView(settings: CompanionSettings.shared) } }
+    var body: some Scene {
+        Settings { CompanionSettingsView(settings: CompanionSettings.shared) }
+            .commands {
+                CommandGroup(replacing: .appSettings) {
+                    Button("Settings…") {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    }
+                    .keyboardShortcut(",", modifiers: [.command])
+                }
+            }
+    }
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlay: OverlayController!
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        NSApp.setActivationPolicy(.regular)
         ChromeBridge.shared.start()
         overlay = OverlayController(settings: CompanionSettings.shared)
         overlay.show()

@@ -29,6 +29,8 @@ bash scripts/package-macos-app.sh
 open dist/YukiCompanion.app
 ```
 
+Yuki is a normal Dock application. Open **Yuki Companion → Settings…** or press **⌘,** to personalize it. The app must be running and active for the shortcut to apply.
+
 The package includes the SwiftPM executable, Yuki animation resources, a valid application manifest, and the screen-recording usage description.
 
 ## One-time Chrome setup
