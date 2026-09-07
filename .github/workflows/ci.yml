@@ -51,6 +51,13 @@ jobs:
           node-version: "22"
       - name: Validate extension JavaScript
         run: node --check ChromeExtension/background.js && node --check ChromeExtension/content.js && node --check ChromeExtension/popup.js
+      - name: Test bridge restart and binding behavior
+        run: node --test Tests/Extension/background.test.cjs
+      - name: Upload shared Chrome extension with installation guide
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yuki-ChromeExtension
+          path: ChromeExtension/
       - name: Validate extension manifest and product assets
         run: python3 -c "import json; json.load(open('ChromeExtension/manifest.json')); json.load(open('Shared/Configuration/companion.schema.json')); json.load(open('PetAssets/Production/animations.json'))"
       - run: test -f ChromeExtension/manifest.json && test -f PetAssets/Production/animations.json && test -f Shared/Configuration/companion.schema.json

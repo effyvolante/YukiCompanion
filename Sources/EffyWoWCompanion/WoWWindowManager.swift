@@ -26,13 +26,16 @@ struct WoWWindowManager {
         }
         guard let application else { return nil }
         let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        return (CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]])?.first(where: { ($0[kCGWindowOwnerPID as String] as? pid_t) == application.processIdentifier }).flatMap { info in
+        return (CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]])?.filter {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == application.processIdentifier &&
+            ($0[kCGWindowLayer as String] as? Int) == 0
+        }.compactMap { info -> Window? in
             guard let id = info[kCGWindowNumber as String] as? CGWindowID,
                   let value = info[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = value["X"], let y = value["Y"],
-                  let w = value["Width"], let h = value["Height"] else { return nil }
+                  let w = value["Width"], let h = value["Height"], w > 1, h > 1 else { return nil }
             return Window(id: id, bounds: CGRect(x: x, y: y, width: w, height: h))
-        }
+        }.first
     }
 
     func activeWindow() -> CGRect? { window()?.bounds }

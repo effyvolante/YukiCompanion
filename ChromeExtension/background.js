@@ -1,19 +1,58 @@
 const BRIDGE = "http://127.0.0.1:39173";
 let boundTabId = null;
 let sessionToken = null;
-chrome.storage.local.get(["boundTabId"], value => { boundTabId = value.boundTabId ?? null; });
+const bindingReady = chrome.storage.local.get(["boundTabId"]).then(value => { boundTabId = value.boundTabId ?? null; });
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "bind_tab" && (sender.tab || message.tabId)) { boundTabId = sender.tab?.id ?? message.tabId; chrome.storage.local.set({ boundTabId, boundUrl: message.url || sender.tab?.url }); sendResponse({ ok: true }); }
-  if (message.type === "binding_status") sendResponse({ boundTabId });
+  if (message.type === "bridge_event" || message.type === "bridge_context") {
+    (async () => {
+      await bindingReady;
+      if (sender.tab?.id !== boundTabId) throw new Error("Tab is not bound to Yuki.");
+      if (message.type === "bridge_event") {
+        await postEvent(message.event);
+        sendResponse({ ok: true });
+      } else {
+        const response = await bridgeFetch(`/context/${encodeURIComponent(message.contextID)}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("Captured image is unavailable.");
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        sendResponse({ dataURL: `data:image/png;base64,${btoa(binary)}` });
+      }
+    })().catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+  if (message.type === "bind_tab") {
+    (async () => {
+      await bindingReady;
+      const tab = await chrome.tabs.get(sender.tab?.id ?? message.tabId);
+      if (!/^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(tab.url || "")) throw new Error("Choose a ChatGPT tab in Chrome first.");
+      // Install the shared receiver before confirming the binding.
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+      boundTabId = tab.id;
+      await chrome.storage.local.set({ boundTabId, boundUrl: tab.url });
+      sendResponse({ ok: true });
+    })().catch(error => sendResponse({ ok: false, message: error.message }));
+  }
+  if (message.type === "binding_status") bindingReady.then(() => sendResponse({ boundTabId }));
   return true;
 });
+let polling = false;
 async function poll() {
+  if (polling) return;
+  polling = true;
   try {
-    if (!sessionToken) { const session = await fetch(`${BRIDGE}/session`, { cache: "no-store" }); if (session.ok) sessionToken = (await session.json()).token; }
-    const command = await (await fetch(`${BRIDGE}/commands`, { cache: "no-store", headers: bridgeHeaders() })).json();
-    if (command.type !== "send_message" || boundTabId == null) return;
-    deliver(command);
-  } catch (_) {}
+    await bindingReady;
+    const response = await bridgeFetch("/commands", { cache: "no-store" });
+    if (!response.ok) throw new Error("Bridge unavailable");
+    const command = await response.json();
+    if (command.type !== "send_message") return;
+    if (boundTabId == null) {
+      await postEvent({ type: "error", id: command.id, message: "No ChatGPT tab is bound. Open your conversation in Chrome, click the Yuki extension, and choose Bind this tab to Yuki." });
+      return;
+    }
+    await deliver(command);
+  } catch (_) { sessionToken = null; }
+  finally { polling = false; }
 }
 async function deliver(command) {
   try {
@@ -32,8 +71,21 @@ async function deliver(command) {
 }
 chrome.tabs.onRemoved.addListener(tabId => { if (tabId === boundTabId) { boundTabId = null; chrome.storage.local.remove(["boundTabId", "boundUrl"]); } });
 function bridgeHeaders() { return sessionToken ? { "X-Yuki-Bridge-Token": sessionToken } : {}; }
-function postEvent(event) { fetch(`${BRIDGE}/events`, { method: "POST", headers: { "Content-Type": "application/json", ...bridgeHeaders() }, body: JSON.stringify(event) }).catch(() => {}); }
-chrome.alarms.create("yukiPoll", { periodInMinutes: 0.01 });
+async function bridgeFetch(path, options = {}) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (!sessionToken) {
+      const session = await fetch(`${BRIDGE}/session`, { cache: "no-store" });
+      if (!session.ok) throw new Error("Start the Yuki app first.");
+      sessionToken = (await session.json()).token;
+    }
+    const response = await fetch(`${BRIDGE}${path}`, { ...options, headers: { ...options.headers, ...bridgeHeaders() } });
+    if (response.status !== 401) return response;
+    sessionToken = null;
+  }
+  throw new Error("Bridge session expired.");
+}
+function postEvent(event) { return bridgeFetch("/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(event) }).catch(() => {}); }
+chrome.alarms.create("yukiPoll", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === "yukiPoll") poll(); });
 setInterval(poll, 450);
 poll();

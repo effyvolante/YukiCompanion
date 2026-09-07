@@ -154,7 +154,12 @@ final class SettingsWindowController {
                 var imageData: Data?
                 if includeWoWView {
                     model.state = .capturing
-                    guard let capture = WoWScreenshotService().capture() else {
+                    guard CGPreflightScreenCaptureAccess() else {
+                        model.append(.yuki, "Allow Yuki in System Settings → Privacy & Security → Screen Recording, then restart Yuki and try the eye button again.")
+                        model.state = .error
+                        return
+                    }
+                    guard let capture = WoWScreenshotService(applicationName: settings.watchedApplication).capture() else {
                         model.append(.yuki, "I can’t see the selected application window right now.")
                         model.state = .error
                         return

@@ -1,3 +1,6 @@
+(() => {
+if (globalThis.__yukiContentInstalled) return;
+globalThis.__yukiContentInstalled = true;
 function composer() {
   const candidates = [...document.querySelectorAll('textarea, [contenteditable="true"], [role="textbox"]')];
   const visible = e => { const style = getComputedStyle(e); const rect = e.getBoundingClientRect(); return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0; };
@@ -21,9 +24,9 @@ function setExactText(element, text) {
 }
 async function attachContextImage(contextID, commandToken) {
   if (!contextID) return true;
-  const headers = {}; if (commandToken) headers["X-Yuki-Bridge-Token"] = commandToken;
-  const response = await fetch(`http://127.0.0.1:39173/context/${encodeURIComponent(contextID)}`, { cache: "no-store", headers });
-  if (!response.ok) return false;
+  const context = await chrome.runtime.sendMessage({ type: "bridge_context", contextID });
+  if (!context?.dataURL) return false;
+  const response = await fetch(context.dataURL);
   const blob = await response.blob();
   let input = [...document.querySelectorAll('input[type="file"]')].find(e => !e.disabled);
   if (!input) {
@@ -106,7 +109,7 @@ function isGenerationPlaceholder(text) {
   const normalized = text.replace(/\u2026/g, "...").replace(/\s+/g, " ").trim().toLowerCase();
   return /^(thinking|thinking\.\.\.|generating|generating\.\.\.|working|working\.\.\.|searching|searching\.\.\.|analyzing image|analyzing image\.\.\.|analyzing|analyzing\.\.\.)$/.test(normalized);
 }
-function emit(event, token) { const headers = { "Content-Type": "application/json" }; if (token) headers["X-Yuki-Bridge-Token"] = token; fetch("http://127.0.0.1:39173/events", { method: "POST", headers, body: JSON.stringify(event) }).catch(() => {}); }
+function emit(event, token) { chrome.runtime.sendMessage({ type: "bridge_event", event }).catch(() => {}); }
 function waitForResponse(id, baseline, commandToken) {
   const baselineLast = baseline.at(-1) || "";
   let last = "", stable = 0, announced = false;
@@ -138,7 +141,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== "send_message") return;
   const baseline = assistantTurns();
   (async () => {
-    if (!(await attachContextImage(message.contextID, message.token))) { sendResponse({ type: "error", message: "Yuki captured WoW, but ChatGPT wouldn’t accept the image attachment." }); return; }
+    if (!(await attachContextImage(message.contextID, message.token))) { sendResponse({ type: "error", message: "Yuki captured the selected app, but ChatGPT wouldn’t accept the image attachment." }); return; }
     const target = composer();
     if (!target || !setExactText(target, message.text)) { sendResponse({ type: "error", message: "I couldn’t find ChatGPT’s message box." }); return; }
     return submitComposer(target, Boolean(message.contextID));
@@ -149,3 +152,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }).catch(() => sendResponse({ type: "error", message: "Yuki couldn’t prepare the ChatGPT message." }));
   return true;
 });
+})();
