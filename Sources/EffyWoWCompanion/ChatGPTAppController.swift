@@ -3,7 +3,7 @@ import ApplicationServices
 
 @MainActor final class ChatGPTAppController {
     static let shared = ChatGPTAppController()
-    private let defaultChatTitle = "Yuki — WoW Companion"
+    private let defaultChatTitle = "Yuki — App Companion"
     private var boundWindow: AXUIElement?
     private var boundComposer: AXUIElement?
     private var boundSendButton: AXUIElement?
@@ -471,11 +471,11 @@ private enum YukiBridgeError: LocalizedError {
         switch self {
         case .needsBinding: "Click Yuki’s link button once to select the Work chat before sending."
         case .busy: "Yuki is still waiting for the previous message."
-        case .accessibility: "Yuki needs Accessibility permission. Enable Effy WoW Companion in System Settings → Privacy & Security → Accessibility."
+        case .accessibility: "Yuki needs Accessibility permission. Enable Yuki Companion in System Settings → Privacy & Security → Accessibility."
         case .notInstalled: "ChatGPT isn’t installed."
-        case .boundChatMissing: "Open or create a ChatGPT chat named ‘Yuki — WoW Companion’, then try again. Yuki stopped safely so she wouldn’t send your message to the wrong conversation."
-        case .boundChatUnavailable: "Yuki found ‘Yuki — WoW Companion’, but ChatGPT wouldn’t open it. Open that chat manually once, then try again."
-        case .noComposer: "I couldn’t find the ChatGPT message box. Open your ‘Yuki — WoW Companion’ chat once, then try again."
+        case .boundChatMissing: "Open or create a ChatGPT chat named ‘Yuki — App Companion’, then try again. Yuki stopped safely so she wouldn’t send your message to the wrong conversation."
+        case .boundChatUnavailable: "Yuki found ‘Yuki — App Companion’, but ChatGPT wouldn’t open it. Open that chat manually once, then try again."
+        case .noComposer: "I couldn’t find the ChatGPT message box. Open your ‘Yuki — App Companion’ chat once, then try again."
         case .cannotWrite: "ChatGPT’s message box wouldn’t accept Yuki’s message."
         case .notFocused: "Yuki stopped safely because ChatGPT was not focused."
         case .cannotSubmit: "Yuki placed the message in ChatGPT but couldn’t safely submit it."

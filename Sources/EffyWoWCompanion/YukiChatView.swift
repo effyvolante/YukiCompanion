@@ -96,6 +96,12 @@ private struct YukiMenuView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Yuki menu").font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
             Divider().overlay(Color.pink.opacity(0.35))
+            Button {
+                SetupGuideWindowController.shared.show()
+            } label: {
+                MenuLabel(title: "Get started", detail: "Set up Yuki from beginning to end")
+            }
+            .buttonStyle(.plain)
             Toggle(isOn: $settings.automaticLook) {
                 MenuLabel(title: "Automatic Look", detail: "Attach context for visual questions")
             }

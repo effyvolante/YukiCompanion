@@ -189,7 +189,7 @@ final class SettingsWindowController {
             guard let self else { return }
             let alert = NSAlert()
             alert.messageText = "Bind Yuki’s Chrome chat"
-            alert.informativeText = "Open the Yuki — WoW Companion conversation in Chrome, click the Yuki extension, then choose ‘Bind this tab to Yuki’."
+            alert.informativeText = "Open the Yuki — App Companion conversation in Chrome, click the Yuki extension, then choose ‘Bind this tab to Yuki’."
             alert.addButton(withTitle: "Got it")
             alert.runModal()
             model.state = .idle
