@@ -94,6 +94,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
             release/YukiCompanion-macos.zip \
             release/YukiCompanion-Windows.zip \
             --title "Yuki Companion $GITHUB_REF_NAME" \
