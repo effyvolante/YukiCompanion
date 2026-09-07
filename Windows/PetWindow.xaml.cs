@@ -23,7 +23,7 @@ public partial class PetWindow : Window
         this.chat = chat;
         chat.VisualStateChanged += SetState;
         chat.ThemeChanged += SetTheme;
-        theme = chat.Configuration.ThemeId;
+        theme = chat.ThemeId;
         timer.Tick += (_, _) => Advance();
         SetState("idle");
         var workArea = SystemParameters.WorkArea;
