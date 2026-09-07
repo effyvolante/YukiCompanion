@@ -10,26 +10,41 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
 
 @MainActor struct YukiChatView: View {
     @ObservedObject var model: CompanionModel
+    @ObservedObject var settings: CompanionSettings
     var companionName = "Yuki"
     let onSend: () -> Void
     let onCheckWorkChat: () -> Void
     let onClose: () -> Void
+    @State private var showMenu = false
+
+    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self.model = model
+        self.settings = settings
+        self.companionName = companionName
+        self.onSend = onSend
+        self.onCheckWorkChat = onCheckWorkChat
+        self.onClose = onClose
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Text(companionName).font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
                 Text(status).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Menu {
-                    Button("Settings…") {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                    }
-                    Button("Check Chrome binding", action: onCheckWorkChat)
+                Button {
+                    showMenu.toggle()
                 } label: {
                     Image(systemName: "ellipsis.circle").foregroundStyle(.pink)
                 }
-                .menuStyle(.borderlessButton)
+                .buttonStyle(.plain)
                 .help("Yuki menu")
+                .popover(isPresented: $showMenu, arrowEdge: .top) {
+                    YukiMenuView(model: model, settings: settings, onCheckWorkChat: {
+                        showMenu = false
+                        onCheckWorkChat()
+                    })
+                }
                 Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s Work chat")
                 Button("×", action: onClose).buttonStyle(.plain).font(.title2)
             }.padding(.horizontal, 14).padding(.vertical, 10)
@@ -68,6 +83,62 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
     }
     private var status: String {
         switch model.state { case .waiting, .opening: "thinking…"; case .replying: "replying…"; case .error: "a little confused"; default: "" }
+    }
+}
+
+@MainActor
+private struct YukiMenuView: View {
+    @ObservedObject var model: CompanionModel
+    @ObservedObject var settings: CompanionSettings
+    let onCheckWorkChat: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Yuki menu").font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
+            Divider().overlay(Color.pink.opacity(0.35))
+            Toggle(isOn: $settings.automaticLook) {
+                MenuLabel(title: "Automatic Look", detail: "Attach context for visual questions")
+            }
+            Toggle(isOn: $settings.launchAtLogin) {
+                MenuLabel(title: "Launch at login", detail: "Start Yuki when you sign in")
+            }
+            Button {
+                model.includeWoWView = true
+            } label: {
+                MenuLabel(title: "Attach app window", detail: settings.watchedApplication)
+            }
+            .buttonStyle(.plain)
+            Divider().overlay(Color.pink.opacity(0.35))
+            Button {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            } label: {
+                MenuLabel(title: "Settings…", detail: "Name, app, conversation, startup")
+            }
+            .buttonStyle(.plain)
+            Button(action: onCheckWorkChat) {
+                MenuLabel(title: "Check Chrome binding", detail: settings.chromeConversation)
+            }
+            .buttonStyle(.plain)
+            Text("ChatGPT is connected through your bound Chrome tab.").font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(width: 290, alignment: .leading)
+        .foregroundStyle(.white)
+        .background(.black.opacity(0.94))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.pink.opacity(0.75), lineWidth: 1.25))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+private struct MenuLabel: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).foregroundStyle(.white)
+            Text(detail).font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
 
