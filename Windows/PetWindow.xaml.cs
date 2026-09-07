@@ -60,7 +60,19 @@ public partial class PetWindow : Window
             "blink" => new Animation("Idle", "idle_", 5, false),
             _ => new Animation("Idle", "idle_", 8, true)
         };
-        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Themes", theme, animation.Folder, $"{theme.ToLowerInvariant()}_{animation.Prefix}{frame:000}.png");
+        if (theme == "Yuki")
+        {
+            animation = state switch
+            {
+                "thinking" => new Animation("Thinking", "thinking_", 10, true),
+                "replying" => new Animation("Replying", "replying_", 7, true),
+                "error" => new Animation("Error", "error_", 8, false),
+                _ => new Animation("Idle", "idle_", 7, true)
+            };
+        }
+        var path = theme == "Yuki"
+            ? System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", animation.Folder, $"{animation.Prefix}{frame:000}.png")
+            : System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Themes", theme, animation.Folder, $"{theme.ToLowerInvariant()}_{animation.Prefix}{frame:000}.png");
         if (System.IO.File.Exists(path)) Sprite.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
         frame++;
         if (frame >= animation.Count)

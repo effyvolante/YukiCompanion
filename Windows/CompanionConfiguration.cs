@@ -7,7 +7,12 @@ public sealed class CompanionConfiguration
 {
     public int SchemaVersion { get; set; } = 1;
     public string CompanionDisplayName { get; set; } = "Yuki";
-    public string ThemeId { get; set; } = "Yuki";
+    private string themeId = "Yuki";
+    public string ThemeId
+    {
+        get => themeId;
+        set => themeId = value is "Yuki" or "Peaches" ? value : "Yuki";
+    }
     public string ChromeConversation { get; set; } = "Yuki — App Companion";
     public WatchedApplication? WatchedApplication { get; set; }
     public double Size { get; set; } = 180;

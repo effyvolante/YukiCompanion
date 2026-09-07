@@ -6,7 +6,15 @@ import SwiftUI
 final class CompanionSettings: ObservableObject {
     static let shared = CompanionSettings()
     @Published var companionDisplayName: String { didSet { save() } }
-    @Published var themeID: String { didSet { save() } }
+    @Published var themeID: String {
+        didSet {
+            if !CompanionTheme.isAvailable(themeID) {
+                themeID = "Yuki"
+                return
+            }
+            save()
+        }
+    }
     @Published var watchedApplication: String { didSet { save() } }
     @Published var chromeConversation: String { didSet { save() } }
     @Published var launchAtLogin: Bool { didSet { save(); applyLaunchAtLogin() } }
@@ -18,7 +26,8 @@ final class CompanionSettings: ObservableObject {
 
     private init() {
         companionDisplayName = defaults.string(forKey: Key.name) ?? "Yuki"
-        themeID = defaults.string(forKey: Key.theme) ?? "Yuki"
+        let savedTheme = defaults.string(forKey: Key.theme) ?? "Yuki"
+        themeID = CompanionTheme.isAvailable(savedTheme) ? savedTheme : "Yuki"
         watchedApplication = defaults.string(forKey: Key.watched) ?? ""
         let savedConversation = defaults.string(forKey: Key.conversation)
         chromeConversation = savedConversation == "Yuki — WoW Companion" ? "Yuki — App Companion" : (savedConversation ?? "Yuki — App Companion")
@@ -52,8 +61,8 @@ struct CompanionSettingsView: View {
             Section("Companion") {
                 TextField("Name", text: $settings.companionDisplayName)
                 Picker("Theme", selection: $settings.themeID) {
-                    ForEach(CompanionTheme.all) { theme in
-                        Text("\(theme.displayName) — \(theme.description)").tag(theme.id)
+                    ForEach(CompanionTheme.available) { theme in
+                        Text(theme.menuLabel).tag(theme.id)
                     }
                 }
             }

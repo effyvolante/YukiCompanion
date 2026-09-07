@@ -97,11 +97,7 @@ public partial class SettingsWindow : Window
         public static readonly ThemeChoice[] All =
         [
             new("Yuki", "Yuki — Pink octopus"),
-            new("Mochi", "Mochi — Lavender axolotl"),
-            new("Pippin", "Pippin — Mint slime cat"),
-            new("Belle", "Belle — Golden bee"),
-            new("Peaches", "Peaches — Cream bunny"),
-            new("Nova", "Nova — Lavender baby dragon")
+            new("Peaches", "Peaches — BETA · Cream bunny")
         ];
     }
 }

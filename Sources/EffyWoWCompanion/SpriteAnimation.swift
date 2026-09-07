@@ -15,12 +15,13 @@ import SwiftUI
         let packaged = Bundle.main.url(forResource: "EffyWoWCompanion_EffyWoWCompanion", withExtension: "bundle").flatMap(Bundle.init(url:))
         let assets = packaged ?? Bundle.module
         let theme = CompanionTheme.resolve(themeID)
-        frames = (0..<state.frameCount).compactMap { i in
-            let sourceIndex = state == .rareIdleB ? max(0, state.frameCount - i - 1) : i
-            return assets.image(named: "\(theme.id.lowercased())_\(state.filePrefix)_\(String(format: "%03d", sourceIndex))")
-        }
-        if frames.isEmpty, theme.id == "Yuki" {
+        if theme.id == "Yuki" {
             frames = (0..<state.legacyFrameCount).compactMap { i in assets.image(named: "\(state.legacyPrefix)_\(String(format: "%03d", i))") }
+        } else {
+            frames = (0..<state.frameCount).compactMap { i in
+                let sourceIndex = state == .rareIdleB ? max(0, state.frameCount - i - 1) : i
+                return assets.image(named: "\(theme.id.lowercased())_\(state.filePrefix)_\(String(format: "%03d", sourceIndex))")
+            }
         }
         image = frames.first
         guard frames.count > 1 else { return }; scheduleNextFrame()

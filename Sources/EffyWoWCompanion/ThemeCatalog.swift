@@ -6,6 +6,12 @@ struct CompanionTheme: Identifiable, Equatable {
     let description: String
     let folders: [String: String]
 
+    var menuLabel: String {
+        isBeta ? "\(displayName) — BETA · \(description)" : "\(displayName) — \(description)"
+    }
+
+    var isBeta: Bool { id == "Peaches" }
+
     static let standardFolders: [String: String] = [
         "idle": "Idle", "blink": "Idle", "click": "Click", "hover": "Look",
         "thinking": "Thinking", "replying": "Replying", "answerStart": "AnswerStart",
@@ -22,5 +28,13 @@ struct CompanionTheme: Identifiable, Equatable {
         CompanionTheme(id: "Nova", displayName: "Nova", description: "Lavender baby dragon", folders: standardFolders)
     ]
 
-    static func resolve(_ id: String) -> CompanionTheme { all.first { $0.id == id } ?? all[0] }
+    // Keep the complete catalog available for asset validation and future
+    // releases, while exposing only the currently supported choices in the UI.
+    static let available: [CompanionTheme] = all.filter { ["Yuki", "Peaches"].contains($0.id) }
+
+    static func isAvailable(_ id: String) -> Bool {
+        available.contains { $0.id == id }
+    }
+
+    static func resolve(_ id: String) -> CompanionTheme { available.first { $0.id == id } ?? available[0] }
 }
