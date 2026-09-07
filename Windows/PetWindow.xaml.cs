@@ -19,7 +19,7 @@ public partial class PetWindow : Window
     {
         InitializeComponent();
         this.chat = chat;
-        chat.StateChanged += SetState;
+        chat.VisualStateChanged += SetState;
         timer.Tick += (_, _) => Advance();
         SetState("idle");
         var workArea = SystemParameters.WorkArea;
@@ -48,21 +48,23 @@ public partial class PetWindow : Window
     {
         var animation = state switch
         {
-            "thinking" => (folder: "Thinking", prefix: "thinking_", count: 10, loop: true),
-            "replying" => ("Replying", "replying_", 7, true),
-            "answerComplete" => ("AnswerComplete", "answercomplete_", 6, false),
-            "error" => ("Error", "error_", 8, false),
-            "blink" => ("Blink", "blink_", 5, false),
-            _ => ("Idle", "idle_", 7, true)
+            "thinking" => new Animation("Thinking", "thinking_", 10, true),
+            "replying" => new Animation("Replying", "replying_", 7, true),
+            "answerComplete" => new Animation("AnswerComplete", "answercomplete_", 6, false),
+            "error" => new Animation("Error", "error_", 8, false),
+            "blink" => new Animation("Blink", "blink_", 5, false),
+            _ => new Animation("Idle", "idle_", 7, true)
         };
-        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", animation.folder, $"{animation.prefix}{frame:000}.png");
-        if (File.Exists(path)) Sprite.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
+        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", animation.Folder, $"{animation.Prefix}{frame:000}.png");
+        if (System.IO.File.Exists(path)) Sprite.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
         frame++;
-        if (frame >= animation.count)
+        if (frame >= animation.Count)
         {
-            if (animation.loop) frame = 0;
+            if (animation.Loop) frame = 0;
             else { state = "idle"; frame = 0; timer.Interval = TimeSpan.FromMilliseconds(360); }
         }
         if (state == "idle" && DateTime.UtcNow >= nextBlink) { state = "blink"; frame = 0; nextBlink = DateTime.UtcNow.AddSeconds(5); }
     }
+
+    private readonly record struct Animation(string Folder, string Prefix, int Count, bool Loop);
 }

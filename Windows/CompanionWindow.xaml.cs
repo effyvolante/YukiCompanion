@@ -9,7 +9,7 @@ public partial class CompanionWindow : Window
     private readonly ChromeBridgeClient bridge;
     private readonly WatchedWindowService windows = new();
     private SettingsWindow? settingsWindow;
-    public event Action<string>? StateChanged;
+    public event Action<string>? VisualStateChanged;
     public CompanionWindow(CompanionConfiguration configuration)
     {
         InitializeComponent();
@@ -19,10 +19,10 @@ public partial class CompanionWindow : Window
         Title = configuration.CompanionDisplayName;
         CompanionName.Text = configuration.CompanionDisplayName;
         foreach (var message in configuration.Messages.TakeLast(200)) AppendMessage(message.Role, message.Text, persist: false);
-        bridge.ReplySubmitted += () => Dispatcher.Invoke(() => { Status.Text = "replying…"; StateChanged?.Invoke("replying"); ActivateWatchedWindow(); });
-        bridge.ReplyUpdated += _ => Dispatcher.Invoke(() => { Status.Text = "replying…"; StateChanged?.Invoke("replying"); });
-        bridge.ReplyReceived += reply => Dispatcher.Invoke(() => { AppendMessage("yuki", reply); Status.Text = "ready"; StateChanged?.Invoke("answerComplete"); });
-        bridge.ErrorReceived += error => Dispatcher.Invoke(() => { AppendMessage("yuki", $"Error: {error}"); Status.Text = "needs attention"; StateChanged?.Invoke("error"); });
+        bridge.ReplySubmitted += () => Dispatcher.Invoke(() => { Status.Text = "replying…"; VisualStateChanged?.Invoke("replying"); ActivateWatchedWindow(); });
+        bridge.ReplyUpdated += _ => Dispatcher.Invoke(() => { Status.Text = "replying…"; VisualStateChanged?.Invoke("replying"); });
+        bridge.ReplyReceived += reply => Dispatcher.Invoke(() => { AppendMessage("yuki", reply); Status.Text = "ready"; VisualStateChanged?.Invoke("answerComplete"); });
+        bridge.ErrorReceived += error => Dispatcher.Invoke(() => { AppendMessage("yuki", $"Error: {error}"); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); });
         Closed += (_, _) => bridge.Dispose();
     }
 
@@ -47,7 +47,7 @@ public partial class CompanionWindow : Window
 
     private async Task SendMessageAsync(string text, bool includeContext = false)
     {
-        AppendMessage("user", text); Status.Text = includeContext ? "looking…" : "thinking…"; StateChanged?.Invoke("thinking");
+        AppendMessage("user", text); Status.Text = includeContext ? "looking…" : "thinking…"; VisualStateChanged?.Invoke("thinking");
         LookButton.IsEnabled = false;
         try
         {
@@ -57,20 +57,20 @@ public partial class CompanionWindow : Window
             {
                 if (configuration.WatchedApplication is not { } watched)
                 {
-                    AppendMessage("yuki", "Choose an open application in Settings before asking Yuki to look."); Status.Text = "needs attention"; StateChanged?.Invoke("error"); return;
+                    AppendMessage("yuki", "Choose an open application in Settings before asking Yuki to look."); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); return;
                 }
                 var window = windows.Resolve(watched);
                 var capture = window is null ? null : windows.CaptureWindow(window);
                 if (capture is null)
                 {
-                    AppendMessage("yuki", $"I can’t see a visible window for {watched.DisplayName}. Open it and keep a window visible, then try again."); Status.Text = "needs attention"; StateChanged?.Invoke("error"); return;
+                    AppendMessage("yuki", $"I can’t see a visible window for {watched.DisplayName}. Open it and keep a window visible, then try again."); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); return;
                 }
                 image = capture.Png;
                 outbound = $"[Full {watched.DisplayName} window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is approximately {Math.Clamp(capture.Cursor.X * 100 / Math.Max(1, capture.Window.Bounds.Width), 0, 100)}% from the left and {Math.Clamp(capture.Cursor.Y * 100 / Math.Max(1, capture.Window.Bounds.Height), 0, 100)}% from the top.]\n{text}";
             }
             await bridge.SendAsync(outbound, image);
         }
-        catch (Exception error) { AppendMessage("yuki", $"Error: {error.Message}"); Status.Text = "needs attention"; StateChanged?.Invoke("error"); }
+        catch (Exception error) { AppendMessage("yuki", $"Error: {error.Message}"); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); }
         finally { LookButton.IsEnabled = true; }
     }
 

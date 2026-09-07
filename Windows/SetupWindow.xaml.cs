@@ -46,13 +46,13 @@ public partial class SetupWindow : Window
     {
         if (step == 1)
         {
-            if (string.IsNullOrWhiteSpace(NameBox.Text)) { MessageBox.Show("Choose a name for Yuki first.", Title); return; }
+            if (string.IsNullOrWhiteSpace(NameBox.Text)) { System.Windows.MessageBox.Show("Choose a name for Yuki first.", Title); return; }
             configuration.CompanionDisplayName = NameBox.Text.Trim();
         }
         if (step == 2)
         {
             if (ApplicationBox.SelectedItem is not WatchedWindowService.ApplicationInfo application || WindowBox.SelectedItem is not WatchedWindowService.WindowInfo selected)
-            { MessageBox.Show("Open the application you want Yuki to watch, then choose its window.", Title); return; }
+            { System.Windows.MessageBox.Show("Open the application you want Yuki to watch, then choose its window.", Title); return; }
             configuration.WatchedApplication = new() { DisplayName = application.DisplayName, Identifier = application.Identifier, WindowIdentifier = selected.Title };
         }
         if (step >= 4) { configuration.OnboardingCompleted = true; configuration.Save(); DialogResult = true; Close(); return; }
@@ -62,6 +62,6 @@ public partial class SetupWindow : Window
     private void OpenChromeExtensions(object sender, RoutedEventArgs e)
     {
         try { Process.Start(new ProcessStartInfo { FileName = "chrome://extensions", UseShellExecute = true }); }
-        catch { MessageBox.Show("Open Google Chrome and enter chrome://extensions in its address bar.", Title); }
+        catch { System.Windows.MessageBox.Show("Open Google Chrome and enter chrome://extensions in its address bar.", Title); }
     }
 }

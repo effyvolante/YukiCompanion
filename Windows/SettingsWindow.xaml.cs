@@ -52,7 +52,7 @@ public partial class SettingsWindow : Window
 
     private void Save(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(NameBox.Text)) { MessageBox.Show("Choose a name for Yuki first.", Title); return; }
+        if (string.IsNullOrWhiteSpace(NameBox.Text)) { System.Windows.MessageBox.Show("Choose a name for Yuki first.", Title); return; }
         configuration.CompanionDisplayName = NameBox.Text.Trim();
         configuration.ThemeId = (ThemeBox.SelectedValue as string) ?? "Yuki";
         configuration.ChromeConversation = ConversationBox.Text.Trim().Length == 0 ? "Yuki — App Companion" : ConversationBox.Text.Trim();
@@ -75,7 +75,7 @@ public partial class SettingsWindow : Window
     private void OpenChromeExtensions(object sender, RoutedEventArgs e)
     {
         try { Process.Start(new ProcessStartInfo { FileName = "chrome://extensions", UseShellExecute = true }); }
-        catch { MessageBox.Show("Open Google Chrome and enter chrome://extensions in its address bar.", Title); }
+        catch { System.Windows.MessageBox.Show("Open Google Chrome and enter chrome://extensions in its address bar.", Title); }
     }
 
     private sealed record ThemeChoice(string Id, string Name);
