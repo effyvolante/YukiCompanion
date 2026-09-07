@@ -14,6 +14,20 @@ struct EffyWoWCompanionApp: App {
         ChromeBridge.shared.start()
         overlay = OverlayController(settings: CompanionSettings.shared)
         overlay.show()
+        showFirstRunGuidanceIfNeeded()
+    }
+
+    private func showFirstRunGuidanceIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: "yuki.onboarding.seen") else { return }
+        let alert = NSAlert()
+        alert.messageText = "Welcome to Yuki Companion"
+        alert.informativeText = "For Look, allow Yuki in System Settings → Privacy & Security → Screen Recording. Then load the ChromeExtension folder in chrome://extensions and bind your Yuki conversation tab. Yuki only captures the selected WoW window."
+        alert.addButton(withTitle: "Open Screen Recording Settings")
+        alert.addButton(withTitle: "I’ll do this later")
+        if alert.runModal() == .alertFirstButtonReturn, let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+        UserDefaults.standard.set(true, forKey: "yuki.onboarding.seen")
     }
 }
 

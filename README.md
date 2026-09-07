@@ -22,6 +22,15 @@ python3 Tools/build_yuki_app.py
 open "$HOME/Desktop/Effy WoW Companion.app"
 ```
 
+For a packaged app bundle suitable for testing launch-at-login:
+
+```bash
+bash scripts/package-macos-app.sh
+open dist/YukiCompanion.app
+```
+
+The package includes the SwiftPM executable, Yuki animation resources, a valid application manifest, and the screen-recording usage description.
+
 ## One-time Chrome setup
 
 1. Open `chrome://extensions`.
