@@ -20,6 +20,16 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                 Text(companionName).font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
                 Text(status).font(.caption).foregroundStyle(.secondary)
                 Spacer()
+                Menu {
+                    Button("Settings…") {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    }
+                    Button("Check Chrome binding", action: onCheckWorkChat)
+                } label: {
+                    Image(systemName: "ellipsis.circle").foregroundStyle(.pink)
+                }
+                .menuStyle(.borderlessButton)
+                .help("Yuki menu")
                 Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s Work chat")
                 Button("×", action: onClose).buttonStyle(.plain).font(.title2)
             }.padding(.horizontal, 14).padding(.vertical, 10)
