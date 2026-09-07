@@ -19,6 +19,10 @@ For Windows, use the `YukiCompanion-windows` artifact from a green GitHub Action
 
 Yuki checks the latest published release at [the YukiCompanion GitHub repository](https://github.com/effyvolante/YukiCompanion) when the app opens. The check is enabled by default and can be disabled in Settings. The menu’s **Check for updates** action runs the check immediately and opens the matching platform download when one is available. Updates are user-confirmed: quit Yuki, replace the old app with the downloaded package, and relaunch it.
 
+## Versioning
+
+The stable release line begins with **Yuki Companion v1.0.0**. Backward-compatible fixes increment the patch number (`v1.0.1`); compatible feature releases increment the minor number (`v1.1.0`). Breaking product changes move to the next major version (`v2.0.0`).
+
 ## Feedback
 
 Choose **Send feedback** from Yuki’s chat menu. It opens the repository’s structured feedback form so reports can be reviewed alongside the source and release history. Issues are visible to the public, so avoid including passwords or private conversation content. Select **Essential functionality**, **Quality of life**, or **Design advice**.

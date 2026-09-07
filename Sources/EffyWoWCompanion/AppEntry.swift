@@ -43,7 +43,7 @@ final class SettingsWindowController {
         overlay = OverlayController(settings: CompanionSettings.shared)
         overlay.show()
         showFirstRunGuidanceIfNeeded()
-        showAccessibilityGuidanceIfNeeded()
+        showPermissionGuidanceIfNeeded()
         if CompanionSettings.shared.automaticUpdates { UpdateService.shared.check() }
     }
 
@@ -51,12 +51,10 @@ final class SettingsWindowController {
         guard !UserDefaults.standard.bool(forKey: "yuki.onboarding.seen") else { return }
         let alert = NSAlert()
         alert.messageText = "Welcome to Yuki Companion"
-        alert.informativeText = "For Look, allow Yuki in System Settings → Privacy & Security → Screen Recording. Then load the ChromeExtension folder in chrome://extensions and bind your Yuki conversation tab. Yuki captures only the selected application’s visible window."
-        alert.addButton(withTitle: "Open Screen Recording Settings")
+        alert.informativeText = "Yuki will guide you through Accessibility and Screen Recording approval, then help you connect the Chrome extension. Yuki captures only the selected application’s visible window."
+        alert.addButton(withTitle: "Open Yuki Permissions")
         alert.addButton(withTitle: "I’ll do this later")
-        if alert.runModal() == .alertFirstButtonReturn, let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-            NSWorkspace.shared.open(url)
-        }
+        if alert.runModal() == .alertFirstButtonReturn { PermissionsWindowController.shared.show() }
         UserDefaults.standard.set(true, forKey: "yuki.onboarding.seen")
     }
 
@@ -65,14 +63,23 @@ final class SettingsWindowController {
         NSWorkspace.shared.open(url)
     }
 
-    private func showAccessibilityGuidanceIfNeeded() {
-        guard !AXIsProcessTrusted() else { return }
-        let alert = NSAlert()
-        alert.messageText = "Accessibility permission is off"
-        alert.informativeText = "Yuki needs Accessibility permission for keyboard-assisted and legacy ChatGPT controls. The normal Chrome extension connection still works without it. Re-enable Yuki in System Settings → Privacy & Security → Accessibility."
-        alert.addButton(withTitle: "Open Accessibility Settings")
-        alert.addButton(withTitle: "Not now")
-        if alert.runModal() == .alertFirstButtonReturn { Self.openAccessibilitySettings() }
+    static func requestAccessibilityPermission() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        if !AXIsProcessTrustedWithOptions(options) { openAccessibilitySettings() }
+    }
+
+    static func requestScreenRecordingPermission() {
+        if !CGPreflightScreenCaptureAccess() { _ = CGRequestScreenCaptureAccess() }
+        if !CGPreflightScreenCaptureAccess(), let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func showPermissionGuidanceIfNeeded() {
+        guard !AXIsProcessTrusted() || !CGPreflightScreenCaptureAccess() else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            PermissionsWindowController.shared.show()
+        }
     }
 }
 

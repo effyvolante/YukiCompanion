@@ -134,9 +134,9 @@ private struct YukiMenuView: View {
             }
             .buttonStyle(.plain)
             Button {
-                AppDelegate.openAccessibilitySettings()
+                PermissionsWindowController.shared.show()
             } label: {
-                MenuLabel(title: "Accessibility permission", detail: AXIsProcessTrusted() ? "Enabled" : "Needs re-authorization")
+                MenuLabel(title: "Permissions…", detail: "Accessibility and Screen Recording")
             }
             .buttonStyle(.plain)
             Button(action: onCheckForUpdates) {
