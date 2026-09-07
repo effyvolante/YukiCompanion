@@ -160,7 +160,7 @@ final class SettingsWindowController {
                         return
                     }
                     guard let capture = WoWScreenshotService(applicationName: settings.watchedApplication).capture() else {
-                        model.append(.yuki, "I can’t see the selected application window right now.")
+                        model.append(.yuki, "I can’t see a visible window for \(settings.watchedApplication) right now. Open that app and keep a window visible, then try again.")
                         model.state = .error
                         return
                     }
