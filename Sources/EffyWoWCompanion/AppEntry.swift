@@ -91,7 +91,7 @@ final class SettingsWindowController {
 @MainActor final class OverlayController {
     private let settings: CompanionSettings
     private let petPanel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-    private let chatPanel = YukiChatPanel(contentRect: .zero, styleMask: [.borderless, .resizable], backing: .buffered, defer: false)
+    private let chatPanel = YukiChatPanel(contentRect: .zero, styleMask: [.borderless, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
     private let model = CompanionModel()
     private var petSize: CGFloat = 64
 
@@ -131,7 +131,7 @@ final class SettingsWindowController {
         if chatPanel.isVisible {
             chatPanel.orderOut(nil); model.state = .idle
         } else {
-            repositionBubble(); chatPanel.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); model.focusComposer += 1
+            repositionBubble(); chatPanel.makeKeyAndOrderFront(nil); model.focusComposer += 1
             Task { @MainActor [weak model] in
                 try? await Task.sleep(for: .milliseconds(650))
                 if model?.state == .clicked { model?.state = .idle }

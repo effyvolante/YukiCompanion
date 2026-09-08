@@ -88,20 +88,25 @@ async function submitComposer(element, hasImage = false) {
     // composer to clear here creates a false "kept the draft" error and can
     // cause a duplicate submission through the fallback paths.
     if (activateButton(button)) {
-      await waitForComposerClear(element, hasImage ? 10000 : 2200);
+      // The click itself is the submission signal. Waiting for ChatGPT to
+      // clear the composer makes Yuki feel slow and can block on tabs that
+      // stream or render in the background.
+      await delay(hasImage ? 180 : 80);
       return "button";
     }
   }
   const form = element?.closest("form");
   if (form?.requestSubmit) {
     form.requestSubmit();
-    if (await waitForComposerClear(element)) return "form";
+    await delay(120);
+    return "form";
   }
   // This is a DOM event delivered to the verified ChatGPT composer, not a
   // global macOS keystroke and cannot reach WoW.
   element.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
   element.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
-  return (await waitForComposerClear(element)) ? "enter" : null;
+  await delay(120);
+  return "enter";
 }
 function assistantTurns() {
   const explicit = [...document.querySelectorAll('[data-message-author-role="assistant"]')];
@@ -115,29 +120,39 @@ function isGenerationPlaceholder(text) {
 function emit(event, token) { chrome.runtime.sendMessage({ type: "bridge_event", event }).catch(() => {}); }
 function waitForResponse(id, baseline, commandToken) {
   const baselineLast = baseline.at(-1) || "";
-  let last = "", stable = 0, announced = false;
+  let last = "", announced = false, settledTimer = null, finished = false;
   const scan = () => {
+    if (finished) return;
     const turns = assistantTurns();
     const current = turns.at(-1) || "";
     // ChatGPT exposes a temporary assistant node while generating. It is not
     // a reply and must never be mirrored as Yuki's answer.
     if (isGenerationPlaceholder(current)) {
       last = "";
-      stable = 0;
-      setTimeout(scan, 500);
       return;
     }
-    if (current && current === last) stable++; else if (current) { last = current; stable = 0; }
+    if (current && current !== last) last = current;
     // ChatGPT may stream into a reused AX/DOM message node instead of adding
     // a new node. Text changing after the pre-send baseline is still a new
     // assistant turn and must be returned to Yuki.
     const isNewTurn = turns.length > baseline.length || (current && current !== baselineLast);
     if (current && isNewTurn) {
       if (!announced) { announced = true; emit({ type: "response_update", id }, commandToken); }
-      if (stable >= 4) { emit({ type: "response_complete", id, text: current }, commandToken); return; }
+      clearTimeout(settledTimer);
+      settledTimer = setTimeout(() => {
+        const latest = assistantTurns().at(-1) || "";
+        if (latest && latest === last && !isGenerationPlaceholder(latest)) {
+          finished = true;
+          observer.disconnect();
+          clearInterval(fallback);
+          emit({ type: "response_complete", id, text: latest }, commandToken);
+        } else scan();
+      }, 500);
     }
-    setTimeout(scan, 500);
   };
+  const observer = new MutationObserver(scan);
+  observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+  const fallback = setInterval(scan, 250);
   scan();
 }
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

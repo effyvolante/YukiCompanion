@@ -87,5 +87,5 @@ async function bridgeFetch(path, options = {}) {
 function postEvent(event) { return bridgeFetch("/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(event) }).catch(() => {}); }
 chrome.alarms.create("yukiPoll", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === "yukiPoll") poll(); });
-setInterval(poll, 450);
+setInterval(poll, 150);
 poll();
