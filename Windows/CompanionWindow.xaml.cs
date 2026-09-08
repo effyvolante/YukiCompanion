@@ -36,6 +36,7 @@ public partial class CompanionWindow : Window
     private void Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
     private async void Send(object sender, RoutedEventArgs e) => await SendMessageAsync();
     private void OpenMenu(object sender, RoutedEventArgs e) { MenuButton.ContextMenu!.IsOpen = true; }
+    private void CloseChat(object sender, RoutedEventArgs e) { Close(); Application.Current.Shutdown(); }
     private void OpenSetup(object sender, RoutedEventArgs e)
     {
         MenuButton.ContextMenu!.IsOpen = false;

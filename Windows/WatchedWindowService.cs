@@ -6,7 +6,10 @@ namespace YukiCompanion.Windows;
 
 public sealed class WatchedWindowService
 {
-    public sealed record WindowInfo(nint Handle, string Title, string ProcessName, string Identifier, Rectangle Bounds);
+    public sealed record WindowInfo(nint Handle, string Title, string ProcessName, string Identifier, Rectangle Bounds)
+    {
+        public string DisplayName => $"{ProcessName} — {Title}";
+    }
     public sealed record Capture(byte[] Png, WindowInfo Window, Point Cursor, bool CursorInside);
     public sealed record ApplicationInfo(string DisplayName, string Identifier, IReadOnlyList<WindowInfo> Windows)
     {

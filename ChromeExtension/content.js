@@ -81,13 +81,16 @@ function activateButton(button) {
 async function submitComposer(element, hasImage = false) {
   const button = sendButton(element);
   if (button && !button.disabled) {
-    activateButton(button);
-    if (await waitForComposerClear(element, hasImage ? 10000 : 2200)) return "button";
-    // With an image, ChatGPT can keep the attachment draft visible while it
-    // uploads/processes even though the click has already submitted it. Let
-    // response polling decide completion instead of reporting a false draft
-    // failure or attempting a duplicate submission.
-    if (hasImage) return "button";
+    // ChatGPT's composer is asynchronous. In particular, current builds can
+    // keep the submitted text/attachment mounted while the request is being
+    // accepted, even though the click has already created the user turn. The
+    // response watcher below is the reliable completion signal; requiring the
+    // composer to clear here creates a false "kept the draft" error and can
+    // cause a duplicate submission through the fallback paths.
+    if (activateButton(button)) {
+      await waitForComposerClear(element, hasImage ? 10000 : 2200);
+      return "button";
+    }
   }
   const form = element?.closest("form");
   if (form?.requestSubmit) {

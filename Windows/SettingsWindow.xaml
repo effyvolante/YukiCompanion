@@ -24,11 +24,11 @@
         </GroupBox>
         <GroupBox Header="Visual context" Foreground="#FF9BC5" Padding="14" Margin="0,0,0,16">
           <StackPanel>
-            <TextBlock Text="Open application to watch"/><DockPanel>
+            <DockPanel>
               <Button DockPanel.Dock="Right" Content="Refresh" Click="RefreshApplications"/>
-              <ComboBox x:Name="ApplicationBox" DisplayMemberPath="DisplayName" SelectionChanged="ApplicationChanged"/>
+              <TextBlock Text="Window to watch" VerticalAlignment="Center"/>
             </DockPanel>
-            <TextBlock Text="Window"/><ComboBox x:Name="WindowBox" DisplayMemberPath="Title" SelectionChanged="WindowChanged"/>
+            <ComboBox x:Name="WindowBox" DisplayMemberPath="DisplayName"/>
             <TextBlock Text="Yuki captures only the selected visible window. Keep it open and unminimized when using Look." Foreground="#DAB9C9" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,12"/>
             <CheckBox x:Name="AutomaticLookBox" Content="Look automatically for visual questions" Margin="0,4,0,12"/>
           </StackPanel>

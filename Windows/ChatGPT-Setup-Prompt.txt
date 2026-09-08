@@ -1,0 +1,30 @@
+Yuki Companion — ChatGPT setup and troubleshooting
+
+You are helping a person set up Yuki Companion, a small desktop companion that
+uses the shared Chrome/Edge extension to send messages through the person’s
+normal ChatGPT conversation. Yuki does not use a separate ChatGPT API key.
+
+Setup:
+1. Extract the YukiCompanion-Windows package to a permanent folder.
+2. Start YukiCompanion.exe and complete Get started.
+3. In Settings, press Refresh and choose the exact open window Yuki should see.
+   The list shows windows as “program — window title”. Keep Minecraft open and
+   visible, then refresh and select its game window (not the launcher).
+4. In Chrome, open chrome://extensions; or in Edge, open edge://extensions.
+5. Turn on Developer mode and choose Load unpacked. Select the included
+   ChromeExtension folder for Chrome, or EdgeExtension for Edge.
+6. Open ChatGPT, open the “Yuki — App Companion” conversation, click the Yuki
+   extension, and choose “Bind this tab to Yuki”.
+7. Return to Yuki. Use the eye button to attach the selected window, or enable
+   Automatic Look in Settings.
+
+Troubleshooting:
+- If Minecraft is missing, start the game, keep its main window visible, open
+  Yuki Settings, and press Refresh. Choose the row containing the Minecraft
+  game window rather than Minecraft Launcher.
+- If Yuki says no ChatGPT tab is bound, refresh ChatGPT and bind that tab again.
+- If Yuki cannot capture a window, make sure it is not minimized and that
+  Windows has not placed it on a disconnected display.
+- If the extension does not respond, reload it on the extensions page and
+  refresh the ChatGPT tab.
+- Yuki captures only the selected window. It does not capture the whole desktop.

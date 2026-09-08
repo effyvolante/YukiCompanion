@@ -6,7 +6,7 @@ This is the Windows desktop client for Yuki App Companion. It uses the same loca
 
 1. Extract `YukiCompanion-Windows.zip` to a permanent folder.
 2. Start `YukiCompanion.exe`. The first-run guide opens automatically.
-3. In the guide, choose an application and one of its currently visible windows.
+3. In the guide, press **Refresh open windows** and choose the exact visible window Yuki should watch. Entries are shown as `program — window title`; for Minecraft, choose the game window rather than the launcher.
 4. Choose your browser and load the matching included extension folder:
    - Microsoft Edge: open `edge://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `EdgeExtension`.
    - Google Chrome: open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `ChromeExtension`.
@@ -17,7 +17,7 @@ This is the Windows desktop client for Yuki App Companion. It uses the same loca
 
 Yuki discovers visible top-level windows and stores both the application process name and selected window title. Look captures only that window, never the desktop. Normal visible windows are captured with `PrintWindow`; when a GPU-rendered app declines that request, Yuki falls back to copying the selected window's screen bounds. Minimized or closed windows are rejected and the app explains how to recover.
 
-Settings are stored per user under `%APPDATA%\YukiCompanion\config.json`. The settings window can refresh the list of currently open applications and their windows, change the companion name/theme, choose the browser conversation label, and control Automatic Look and startup behavior.
+Settings are stored per user under `%APPDATA%\YukiCompanion\config.json`. The settings window can refresh the list of every currently open visible window, change the companion name/theme, choose the browser conversation label, and control Automatic Look and startup behavior. The package also includes `ChatGPT-Setup-Prompt.txt`, a copyable setup and troubleshooting prompt for ChatGPT.
 
 Yuki checks the latest published release on GitHub when it opens if **Check for updates automatically** is enabled. Use **Check now** in Settings to check immediately. When an update is found, Yuki opens the matching Windows ZIP download; close Yuki, replace the extracted app folder, and start the new copy.
 

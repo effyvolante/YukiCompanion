@@ -9,8 +9,7 @@ public partial class SettingsWindow : Window
 {
     private readonly CompanionConfiguration configuration;
     private readonly WatchedWindowService windows = new();
-    private IReadOnlyList<WatchedWindowService.ApplicationInfo> applications = [];
-    private IReadOnlyList<WatchedWindowService.WindowInfo> selectedWindows = [];
+    private IReadOnlyList<WatchedWindowService.WindowInfo> availableWindows = [];
     public event Action? Saved;
 
     public SettingsWindow(CompanionConfiguration configuration)
@@ -32,25 +31,14 @@ public partial class SettingsWindow : Window
 
     private void RefreshApplicationList()
     {
-        applications = windows.DiscoverApplications();
-        ApplicationBox.ItemsSource = applications;
+        availableWindows = windows.Discover();
+        WindowBox.ItemsSource = availableWindows;
         var watched = configuration.WatchedApplication;
-        ApplicationBox.SelectedItem = applications.FirstOrDefault(item => string.Equals(item.Identifier, watched?.Identifier, StringComparison.OrdinalIgnoreCase))
-            ?? applications.FirstOrDefault();
-        if (ApplicationBox.SelectedItem is null) WindowBox.ItemsSource = null;
+        WindowBox.SelectedItem = availableWindows.FirstOrDefault(item =>
+            string.Equals(item.Identifier, watched?.Identifier, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(item.Title, watched?.WindowIdentifier, StringComparison.OrdinalIgnoreCase))
+            ?? availableWindows.FirstOrDefault();
     }
-
-    private void ApplicationChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (ApplicationBox.SelectedItem is not WatchedWindowService.ApplicationInfo application) return;
-        selectedWindows = application.Windows;
-        WindowBox.ItemsSource = selectedWindows;
-        var previousTitle = configuration.WatchedApplication?.WindowIdentifier;
-        WindowBox.SelectedItem = selectedWindows.FirstOrDefault(item => string.Equals(item.Title, previousTitle, StringComparison.OrdinalIgnoreCase))
-            ?? selectedWindows.FirstOrDefault();
-    }
-
-    private void WindowChanged(object sender, SelectionChangedEventArgs e) { }
 
     private void Save(object sender, RoutedEventArgs e)
     {
@@ -61,18 +49,16 @@ public partial class SettingsWindow : Window
         configuration.AutomaticLook = AutomaticLookBox.IsChecked == true;
         configuration.LaunchAtLogin = LaunchAtLoginBox.IsChecked == true;
         configuration.AutomaticUpdates = AutomaticUpdatesBox.IsChecked != false;
-        if (ApplicationBox.SelectedItem is WatchedWindowService.ApplicationInfo application)
+        if (WindowBox.SelectedItem is WatchedWindowService.WindowInfo window)
         {
-            var window = WindowBox.SelectedItem as WatchedWindowService.WindowInfo ?? application.Windows.FirstOrDefault();
-            configuration.WatchedApplication = new WatchedApplication { DisplayName = application.DisplayName, Identifier = application.Identifier, WindowIdentifier = window?.Title };
+            configuration.WatchedApplication = new WatchedApplication { DisplayName = window.ProcessName, Identifier = window.Identifier, WindowIdentifier = window.Title };
         }
         configuration.Save();
         Saved?.Invoke();
-        DialogResult = true;
         Close();
     }
 
-    private void Cancel(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
+    private void Cancel(object sender, RoutedEventArgs e) => Close();
 
     private async void CheckForUpdates(object sender, RoutedEventArgs e) => await UpdateService.CheckAsync(manual: true, this);
 
@@ -100,4 +86,5 @@ public partial class SettingsWindow : Window
             new("Peaches", "Peaches — BETA · Cream bunny")
         ];
     }
+
 }
