@@ -1,6 +1,7 @@
 (() => {
 if (globalThis.__yukiContentInstalled) return;
 globalThis.__yukiContentInstalled = true;
+const activeMessages = globalThis.__yukiActiveMessages ||= new Map();
 function composer() {
   const candidates = [...document.querySelectorAll('textarea, [contenteditable="true"], [role="textbox"]')];
   const visible = e => { const style = getComputedStyle(e); const rect = e.getBoundingClientRect(); return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0; };
@@ -117,10 +118,27 @@ function isGenerationPlaceholder(text) {
   const normalized = text.replace(/\u2026/g, "...").replace(/\s+/g, " ").trim().toLowerCase();
   return /^(thinking|thinking\.\.\.|generating|generating\.\.\.|working|working\.\.\.|searching|searching\.\.\.|analyzing image|analyzing image\.\.\.|analyzing|analyzing\.\.\.)$/.test(normalized);
 }
+function isGenerating() {
+  return [...document.querySelectorAll('button')].some(button => {
+    const label = `${button.getAttribute("aria-label") || ""} ${button.getAttribute("title") || ""} ${button.getAttribute("data-testid") || ""} ${button.innerText || ""}`.toLowerCase();
+    return !button.disabled && /stop generating|stop response|stop streaming/.test(label);
+  });
+}
 function emit(event, token) { chrome.runtime.sendMessage({ type: "bridge_event", event }).catch(() => {}); }
 function waitForResponse(id, baseline, commandToken) {
   const baselineLast = baseline.at(-1) || "";
-  let last = "", announced = false, settledTimer = null, finished = false;
+  let last = "", lastEmitted = "", announced = false, settledTimer = null, updateTimer = null, finished = false;
+  const scheduleUpdate = text => {
+    last = text;
+    if (updateTimer) return;
+    updateTimer = setTimeout(() => {
+      updateTimer = null;
+      if (last && last !== lastEmitted) {
+        lastEmitted = last;
+        emit({ type: "response_update", id, text: last }, commandToken);
+      }
+    }, 80);
+  };
   const scan = () => {
     if (finished) return;
     const turns = assistantTurns();
@@ -131,23 +149,27 @@ function waitForResponse(id, baseline, commandToken) {
       last = "";
       return;
     }
-    if (current && current !== last) last = current;
+    if (current && current !== last) scheduleUpdate(current);
     // ChatGPT may stream into a reused AX/DOM message node instead of adding
     // a new node. Text changing after the pre-send baseline is still a new
     // assistant turn and must be returned to Yuki.
     const isNewTurn = turns.length > baseline.length || (current && current !== baselineLast);
     if (current && isNewTurn) {
-      if (!announced) { announced = true; emit({ type: "response_update", id }, commandToken); }
+      if (!announced) announced = true;
       clearTimeout(settledTimer);
+      if (isGenerating()) return;
       settledTimer = setTimeout(() => {
         const latest = assistantTurns().at(-1) || "";
-        if (latest && latest === last && !isGenerationPlaceholder(latest)) {
+        if (latest && latest === last && !isGenerationPlaceholder(latest) && !isGenerating()) {
           finished = true;
           observer.disconnect();
           clearInterval(fallback);
+          clearTimeout(updateTimer);
+          if (latest !== lastEmitted) emit({ type: "response_update", id, text: latest }, commandToken);
           emit({ type: "response_complete", id, text: latest }, commandToken);
+          activeMessages.delete(id);
         } else scan();
-      }, 500);
+      }, 900);
     }
   };
   const observer = new MutationObserver(scan);
@@ -157,17 +179,28 @@ function waitForResponse(id, baseline, commandToken) {
 }
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== "send_message") return;
+  if (activeMessages.has(message.id)) {
+    const state = activeMessages.get(message.id) === "processing" ? "delivered" : "submitted";
+    sendResponse({ type: "status", state });
+    return true;
+  }
+  activeMessages.set(message.id, "processing");
   const baseline = assistantTurns();
   (async () => {
-    if (!(await attachContextImage(message.contextID, message.token))) { sendResponse({ type: "error", message: "Yuki captured the selected app, but ChatGPT wouldn’t accept the image attachment." }); return; }
+    if (!(await attachContextImage(message.contextID, message.token))) throw new Error("context_attachment");
     const target = composer();
     if (!target || !setExactText(target, message.text)) { sendResponse({ type: "error", message: "I couldn’t find ChatGPT’s message box." }); return; }
     return submitComposer(target, Boolean(message.contextID));
   })().then(submissionMethod => {
-    if (!submissionMethod) { sendResponse({ type: "error", message: "ChatGPT kept the draft instead of submitting it." }); return; }
+    if (!submissionMethod) { activeMessages.delete(message.id); sendResponse({ type: "error", message: "ChatGPT kept the draft instead of submitting it." }); return; }
+    activeMessages.set(message.id, "submitted");
     sendResponse({ type: "status", state: "submitted" });
     waitForResponse(message.id, baseline, message.token);
-  }).catch(() => sendResponse({ type: "error", message: "Yuki couldn’t prepare the ChatGPT message." }));
+  }).catch(error => {
+    activeMessages.delete(message.id);
+    const detail = error?.message === "context_attachment" ? "Yuki captured the selected app, but ChatGPT wouldn’t accept the image attachment." : "Yuki couldn’t prepare the ChatGPT message.";
+    sendResponse({ type: "error", message: detail });
+  });
   return true;
 });
 })();

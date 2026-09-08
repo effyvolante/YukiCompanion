@@ -6,15 +6,41 @@ final class ChromeBridge {
     static let shared = ChromeBridge()
     private let port: NWEndpoint.Port = 39173
     private var listener: NWListener?
-    private var commands: [[String: String]] = []
+    private var commands: [QueuedCommand] = []
     private var contexts: [String: Data] = [:]
     private var pending: [String: Pending] = [:]
     private let sessionToken = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+    private var lastBridgeStatus: Date?
+    private var connectionMonitorStarted = false
+    var onConnectionStateChanged: (@MainActor (BridgeConnectionState) -> Void)?
 
-    private struct Pending {
+    private final class QueuedCommand {
+        let payload: [String: String]
+        let messageID: String?
+        var leasedAt: Date?
+
+        init(payload: [String: String], messageID: String? = nil) {
+            self.payload = payload
+            self.messageID = messageID
+        }
+    }
+
+    private final class Pending {
         let onSubmitted: @MainActor () -> Void
         let onReply: @MainActor () -> Void
+        let onPhase: @MainActor (BridgePhase) -> Void
+        let onPartial: @MainActor (String) -> Void
         let continuation: CheckedContinuation<String, Error>
+        var phase: BridgePhase = .queued
+        var lastActivity = Date()
+
+        init(onSubmitted: @escaping @MainActor () -> Void, onReply: @escaping @MainActor () -> Void, onPhase: @escaping @MainActor (BridgePhase) -> Void, onPartial: @escaping @MainActor (String) -> Void, continuation: CheckedContinuation<String, Error>) {
+            self.onSubmitted = onSubmitted
+            self.onReply = onReply
+            self.onPhase = onPhase
+            self.onPartial = onPartial
+            self.continuation = continuation
+        }
     }
 
     func start() {
@@ -31,26 +57,75 @@ final class ChromeBridge {
             }
             self.listener = listener
             listener.start(queue: .global(qos: .utility))
+            if !connectionMonitorStarted {
+                connectionMonitorStarted = true
+                Task { @MainActor [weak self] in await self?.monitorConnection() }
+            }
         } catch {
             NSLog("[YukiChrome] unable to start bridge: %@", error.localizedDescription)
         }
     }
 
-    func send(_ text: String, imageData: Data? = nil, onSubmitted: @escaping @MainActor () -> Void = {}, onReplyDetected: @escaping @MainActor () -> Void) async throws -> String {
+    func send(id: String = UUID().uuidString, _ text: String, imageData: Data? = nil, onSubmitted: @escaping @MainActor () -> Void = {}, onPhase: @escaping @MainActor (BridgePhase) -> Void = { _ in }, onPartial: @escaping @MainActor (String) -> Void = { _ in }, onReplyDetected: @escaping @MainActor () -> Void) async throws -> String {
         start()
-        let id = UUID().uuidString
         return try await withCheckedThrowingContinuation { continuation in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.pending[id] = Pending(onSubmitted: onSubmitted, onReply: onReplyDetected, continuation: continuation)
+                let item = Pending(onSubmitted: onSubmitted, onReply: onReplyDetected, onPhase: onPhase, onPartial: onPartial, continuation: continuation)
+                self.pending[id] = item
+                item.onPhase(.queued)
                 var command = ["type": "send_message", "id": id, "text": text, "token": self.sessionToken]
                 if let imageData { self.contexts[id] = imageData; command["contextID"] = id }
-                self.commands.append(command)
-                try? await Task.sleep(for: .seconds(120))
-                guard let item = self.pending.removeValue(forKey: id) else { return }
-                self.contexts.removeValue(forKey: id)
-                item.continuation.resume(throwing: ChromeBridgeError.message("Yuki’s Chrome bridge did not return a response."))
+                self.commands.append(QueuedCommand(payload: command, messageID: id))
+                await self.monitorTimeout(for: id)
             }
+        }
+    }
+
+    func reconnect() {
+        start()
+        onConnectionStateChanged?(.connecting)
+        commands.append(QueuedCommand(payload: ["type": "reconnect", "token": sessionToken]))
+    }
+
+    private func monitorTimeout(for id: String) async {
+        while let item = pending[id] {
+            let timeout: TimeInterval = switch item.phase {
+            case .queued: 30
+            case .delivered: 45
+            case .submitted: 150
+            case .responding: 300
+            case .completed, .failed: 1
+            }
+            if Date().timeIntervalSince(item.lastActivity) >= timeout {
+                pending.removeValue(forKey: id)
+                acknowledgeCommand(id)
+                contexts.removeValue(forKey: id)
+                item.onPhase(.failed)
+                item.continuation.resume(throwing: ChromeBridgeError.message(timeoutMessage(for: item.phase)))
+                return
+            }
+            try? await Task.sleep(for: .seconds(1))
+        }
+    }
+
+    private func monitorConnection() async {
+        while listener != nil {
+            if let lastBridgeStatus, Date().timeIntervalSince(lastBridgeStatus) > 45 {
+                onConnectionStateChanged?(.disconnected)
+            }
+            try? await Task.sleep(for: .seconds(3))
+        }
+        connectionMonitorStarted = false
+    }
+
+    private func timeoutMessage(for phase: BridgePhase) -> String {
+        switch phase {
+        case .queued: "Yuki couldn’t reach the browser extension. Open the bound ChatGPT tab, then choose Reconnect ChatGPT."
+        case .delivered: "ChatGPT received the message but did not confirm submission."
+        case .submitted: "ChatGPT accepted the message but did not begin a response."
+        case .responding: "ChatGPT stopped updating its response."
+        case .completed, .failed: "Yuki’s browser connection stopped unexpectedly."
         }
     }
 
@@ -89,7 +164,14 @@ final class ChromeBridge {
         let protected = request.path == "/commands" || request.path == "/events" || request.path.hasPrefix("/context/")
         guard !protected || request.token == sessionToken else { writeJSON(connection, ["error": "unauthorized"], status: "401 Unauthorized"); return }
         if request.method == "GET" && request.path == "/commands" {
-            let command = commands.isEmpty ? ["type": "idle"] : commands.removeFirst()
+            let now = Date()
+            guard let index = commands.firstIndex(where: { $0.leasedAt == nil || now.timeIntervalSince($0.leasedAt!) >= 10 }) else {
+                writeJSON(connection, ["type": "idle"]); return
+            }
+            let queued = commands[index]
+            queued.leasedAt = now
+            let command = queued.payload
+            if queued.messageID == nil { commands.remove(at: index) }
             writeJSON(connection, command); return
         }
         if request.method == "GET", request.path.hasPrefix("/context/") {
@@ -105,19 +187,46 @@ final class ChromeBridge {
     }
 
     private func handleEvent(_ object: [String: Any]) {
+        if object["type"] as? String == "bridge_status", let state = object["state"] as? String {
+            lastBridgeStatus = Date()
+            onConnectionStateChanged?(state == "ready" ? .ready : .needsBinding)
+            return
+        }
         guard let id = object["id"] as? String, let type = object["type"] as? String, let item = pending[id] else { return }
-        if type == "status", object["state"] as? String == "submitted" { item.onSubmitted(); return }
-        if type == "response_update" { item.onReply(); return }
+        if type == "status", let state = object["state"] as? String {
+            if state == "delivered" { update(item, phase: .delivered); return }
+            if state == "submitted" { acknowledgeCommand(id); update(item, phase: .submitted); item.onSubmitted(); return }
+        }
+        if type == "response_update" {
+            update(item, phase: .responding)
+            item.onReply()
+            if let text = object["text"] as? String, !text.isEmpty { item.onPartial(text) }
+            return
+        }
         if type == "response_complete", let text = object["text"] as? String {
+            acknowledgeCommand(id)
             pending.removeValue(forKey: id)
             contexts.removeValue(forKey: id)
+            item.onPhase(.completed)
             item.continuation.resume(returning: text)
         } else if type == "error" {
+            acknowledgeCommand(id)
             pending.removeValue(forKey: id)
             contexts.removeValue(forKey: id)
+            item.onPhase(.failed)
             let message = object["message"] as? String ?? "Chrome could not complete the Yuki chat."
             item.continuation.resume(throwing: ChromeBridgeError.message(message))
         }
+    }
+
+    private func acknowledgeCommand(_ id: String) {
+        commands.removeAll { $0.messageID == id }
+    }
+
+    private func update(_ item: Pending, phase: BridgePhase) {
+        item.phase = phase
+        item.lastActivity = Date()
+        item.onPhase(phase)
     }
 
     private func writeJSON(_ connection: NWConnection, _ object: [String: Any], status: String = "200 OK") {
@@ -130,6 +239,9 @@ final class ChromeBridge {
         connection.send(content: Data(header.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
     }
 }
+
+enum BridgePhase: String, Codable { case queued, delivered, submitted, responding, completed, failed }
+enum BridgeConnectionState: String { case connecting, ready, needsBinding, disconnected }
 
 enum ChromeBridgeError: LocalizedError {
     case message(String)

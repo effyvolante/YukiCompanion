@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Yuki — App Companion Bridge",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Connects Yuki to the currently open ChatGPT Work conversation.",
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "host_permissions": ["https://chatgpt.com/*", "https://chat.openai.com/*", "http://127.0.0.1:39173/*"],

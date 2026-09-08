@@ -22,11 +22,14 @@ public partial class CompanionWindow : Window
         Width = Height = Math.Max(260, configuration.Size + 80);
         Title = configuration.CompanionDisplayName;
         CompanionName.Text = configuration.CompanionDisplayName;
-        foreach (var message in configuration.Messages.TakeLast(200)) AppendMessage(message.Role, message.Text, persist: false);
-        bridge.ReplySubmitted += () => Dispatcher.Invoke(() => { Status.Text = "replying…"; VisualStateChanged?.Invoke("replying"); ActivateWatchedWindow(); });
-        bridge.ReplyUpdated += _ => Dispatcher.Invoke(() => { Status.Text = "replying…"; VisualStateChanged?.Invoke("replying"); });
-        bridge.ReplyReceived += reply => Dispatcher.Invoke(() => { AppendMessage("yuki", reply); Status.Text = "ready"; VisualStateChanged?.Invoke("answerComplete"); });
-        bridge.ErrorReceived += error => Dispatcher.Invoke(() => { AppendMessage("yuki", $"Error: {error}"); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); });
+        Composer.Text = configuration.Draft;
+        RenderTranscript();
+        bridge.ReplySubmitted += _ => Dispatcher.Invoke(() => { Status.Text = "Yuki is replying…"; VisualStateChanged?.Invoke("replying"); });
+        bridge.ReplyUpdated += (id, text) => Dispatcher.Invoke(() => { UpdateStreamingResponse(id, text); Status.Text = "Yuki is replying…"; VisualStateChanged?.Invoke("replying"); });
+        bridge.ReplyReceived += (id, reply) => Dispatcher.Invoke(() => { CompleteStreamingResponse(id, reply); Status.Text = "Ready"; VisualStateChanged?.Invoke("answerComplete"); });
+        bridge.PhaseChanged += (id, phase) => Dispatcher.Invoke(() => UpdateDelivery(id, phase));
+        bridge.ErrorReceived += (id, error) => Dispatcher.Invoke(() => { UpdateDelivery(id, "failed"); AppendMessage("yuki", error); Status.Text = "Needs attention"; VisualStateChanged?.Invoke("error"); });
+        bridge.ConnectionStateChanged += state => Dispatcher.Invoke(() => Status.Text = state == "ready" ? "Ready" : state == "needs_binding" ? "Needs extension" : "Connecting…");
         Closed += (_, _) => bridge.Dispose();
     }
 
@@ -36,6 +39,16 @@ public partial class CompanionWindow : Window
     private void Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
     private async void Send(object sender, RoutedEventArgs e) => await SendMessageAsync();
     private void OpenMenu(object sender, RoutedEventArgs e) { MenuButton.ContextMenu!.IsOpen = true; }
+    private void ReconnectChatGPT(object sender, RoutedEventArgs e) { MenuButton.ContextMenu!.IsOpen = false; Status.Text = "Connecting…"; bridge.Reconnect(); }
+    private void RetryLastMessage(object sender, RoutedEventArgs e)
+    {
+        MenuButton.ContextMenu!.IsOpen = false;
+        var message = configuration.Messages.LastOrDefault(value => value.Role.Equals("user", StringComparison.OrdinalIgnoreCase) && value.DeliveryState == "failed");
+        if (message is null) { Status.Text = "Nothing to retry"; return; }
+        Composer.Text = message.Text;
+        Composer.CaretIndex = Composer.Text.Length;
+        Composer.Focus();
+    }
     private void CloseChat(object sender, RoutedEventArgs e) { Close(); System.Windows.Application.Current.Shutdown(); }
     private void OpenSetup(object sender, RoutedEventArgs e)
     {
@@ -58,6 +71,12 @@ public partial class CompanionWindow : Window
         await SendMessageAsync(prompt, includeContext: true);
     }
     private async void ComposerKeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == System.Windows.Input.Key.Enter && System.Windows.Input.Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; await SendMessageAsync(); } }
+    private void ComposerTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (configuration is null) return;
+        configuration.Draft = Composer.Text;
+        configuration.Save();
+    }
     private async Task SendMessageAsync()
     {
         var text = Composer.Text.Trim();
@@ -68,7 +87,8 @@ public partial class CompanionWindow : Window
 
     private async Task SendMessageAsync(string text, bool includeContext = false)
     {
-        AppendMessage("user", text); Status.Text = includeContext ? "looking…" : "thinking…"; VisualStateChanged?.Invoke("thinking");
+        var messageId = Guid.NewGuid().ToString();
+        AppendMessage("user", text, id: messageId, deliveryState: "queued"); Status.Text = includeContext ? "Looking…" : "Connecting…"; VisualStateChanged?.Invoke("thinking");
         LookButton.IsEnabled = false;
         try
         {
@@ -78,18 +98,20 @@ public partial class CompanionWindow : Window
             {
                 if (configuration.WatchedApplication is not { } watched)
                 {
+                    UpdateDelivery(messageId, "failed");
                     AppendMessage("yuki", "Choose an open application in Settings before asking Yuki to look."); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); return;
                 }
                 var window = windows.Resolve(watched);
                 var capture = window is null ? null : windows.CaptureWindow(window);
                 if (capture is null)
                 {
+                    UpdateDelivery(messageId, "failed");
                     AppendMessage("yuki", $"I can’t see a visible window for {watched.DisplayName}. Open it and keep a window visible, then try again."); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); return;
                 }
                 image = capture.Png;
                 outbound = $"[Full {watched.DisplayName} window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is approximately {Math.Clamp(capture.Cursor.X * 100 / Math.Max(1, capture.Window.Bounds.Width), 0, 100)}% from the left and {Math.Clamp(capture.Cursor.Y * 100 / Math.Max(1, capture.Window.Bounds.Height), 0, 100)}% from the top.]\n{text}";
             }
-            await bridge.SendAsync(outbound, image);
+            await bridge.SendAsync(messageId, outbound, image);
         }
         catch (Exception error) { AppendMessage("yuki", $"Error: {error.Message}"); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); }
         finally { LookButton.IsEnabled = true; }
@@ -118,23 +140,68 @@ public partial class CompanionWindow : Window
         ThemeChanged?.Invoke(configuration.ThemeId);
     }
 
-    private void AppendMessage(string role, string text, bool persist = true)
+    private void AppendMessage(string role, string text, bool persist = true, string? id = null, string? deliveryState = null)
     {
-        var label = role.Equals("user", StringComparison.OrdinalIgnoreCase) ? "You" : configuration.CompanionDisplayName;
-        Transcript.Text += (Transcript.Text.Length == 0 ? "" : "\n\n") + $"{label}: {text}";
         if (persist)
         {
-            configuration.Messages.Add(new CompanionMessage { Role = role, Text = text });
+            configuration.Messages.Add(new CompanionMessage { Id = id ?? Guid.NewGuid().ToString(), Role = role, Text = text, DeliveryState = deliveryState });
             if (configuration.Messages.Count > 200) configuration.Messages = configuration.Messages.TakeLast(200).ToList();
             configuration.Save();
         }
+        RenderTranscript();
     }
 
-    private void ActivateWatchedWindow()
+    private void UpdateDelivery(string id, string phase)
     {
-        if (configuration.WatchedApplication is not { } watched) return;
-        if (windows.Resolve(watched) is { } window) SetForegroundWindow(window.Handle);
+        var message = configuration.Messages.FirstOrDefault(value => value.Id == id);
+        if (message is null) return;
+        message.DeliveryState = phase;
+        configuration.Save();
+        RenderTranscript();
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint handle);
+    private void UpdateStreamingResponse(string commandId, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        var responseId = $"response-{commandId}";
+        var message = configuration.Messages.FirstOrDefault(value => value.Id == responseId);
+        if (message is null) configuration.Messages.Add(new CompanionMessage { Id = responseId, Role = "yuki", Text = text, DeliveryState = "responding" });
+        else { message.Text = text; message.DeliveryState = "responding"; }
+        configuration.Save();
+        RenderTranscript();
+    }
+
+    private void CompleteStreamingResponse(string commandId, string text)
+    {
+        UpdateDelivery(commandId, "completed");
+        var responseId = $"response-{commandId}";
+        var message = configuration.Messages.FirstOrDefault(value => value.Id == responseId);
+        if (message is null) configuration.Messages.Add(new CompanionMessage { Id = responseId, Role = "yuki", Text = text, DeliveryState = "completed" });
+        else { message.Text = text; message.DeliveryState = "completed"; }
+        configuration.Save();
+        RenderTranscript();
+    }
+
+    private void RenderTranscript()
+    {
+        var followLatest = TranscriptScroller.ScrollableHeight - TranscriptScroller.VerticalOffset < 24;
+        Transcript.Text = string.Join("\n\n", configuration.Messages.TakeLast(200).Select(message =>
+        {
+            var label = message.Role.Equals("user", StringComparison.OrdinalIgnoreCase) ? "You" : configuration.CompanionDisplayName;
+            var state = message.Role.Equals("user", StringComparison.OrdinalIgnoreCase) && message.DeliveryState is not null and not "completed" ? $"\n{DeliveryLabel(message.DeliveryState)}" : "";
+            return $"{label}: {message.Text}{state}";
+        }));
+        if (followLatest) Dispatcher.BeginInvoke(TranscriptScroller.ScrollToEnd);
+    }
+
+    private static string DeliveryLabel(string state) => state switch
+    {
+        "queued" => "Sending…",
+        "delivered" => "Delivered",
+        "submitted" => "Sent",
+        "responding" => "Yuki is replying…",
+        "failed" => "Needs attention",
+        _ => ""
+    }
+
 }

@@ -112,6 +112,7 @@ final class SettingsWindowController {
         dragView.resized = { [weak self] delta in self?.resizePet(by: delta) }
         petPanel.contentView = dragView
         chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onProvideFeedback: { FeedbackService.openForm() }, onClose: { [weak self] in self?.toggleBubble() }))
+        ChromeBridge.shared.onConnectionStateChanged = { [weak model] state in model?.connectionState = state }
 
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let saved = UserDefaults.standard.string(forKey: "yuki.petFrame").map(NSRectFromString)
@@ -152,9 +153,10 @@ final class SettingsWindowController {
 
     private func send() {
         guard let text = model.takeDraft() else { return }
+        let messageID = model.enqueueUser(text)
         let includeAppWindow = model.includeAppWindow || (settings.automaticLook && DeicticQuestionDetector.needsContext(text))
         model.includeAppWindow = false
-        model.append(.user, text); model.state = .waiting
+        model.state = .waiting
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
@@ -163,11 +165,13 @@ final class SettingsWindowController {
                 if includeAppWindow {
                     model.state = .capturing
                     guard CGPreflightScreenCaptureAccess() else {
+                        model.updateDelivery(messageID, .failed)
                         model.append(.yuki, "Allow Yuki in System Settings → Privacy & Security → Screen Recording, then restart Yuki and try the eye button again.")
                         model.state = .error
                         return
                     }
                     guard let capture = WindowScreenshotService(applicationName: settings.watchedApplication).capture() else {
+                        model.updateDelivery(messageID, .failed)
                         model.append(.yuki, "I can’t see a visible window for \(settings.watchedApplication) right now. Open that app and keep a window visible, then try again.")
                         model.state = .error
                         return
@@ -175,20 +179,18 @@ final class SettingsWindowController {
                     imageData = capture.png
                     outbound = "[Full \(settings.watchedApplication) window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is only supplementary context: approximately \(Int(capture.cursor.normalizedX * 100))% from the left and \(Int(capture.cursor.normalizedY * 100))% from the top.]\n\(text)"
                 }
-                let reply = try await ChromeBridge.shared.send(outbound, imageData: imageData, onSubmitted: { [weak self] in
-                    self?.returnFocusToWatchedApplication()
+                let reply = try await ChromeBridge.shared.send(id: messageID.uuidString, outbound, imageData: imageData, onPhase: { [weak model] phase in
+                    model?.updateDelivery(messageID, YukiChatMessage.DeliveryState(rawValue: phase.rawValue) ?? .queued)
+                }, onPartial: { [weak model] partial in
+                    model?.updateStreamingResponse(for: messageID, text: partial)
                 }) { [weak model] in model?.state = .replying }
-                model.append(.yuki, reply); model.state = .ready
+                model.completeStreamingResponse(for: messageID, text: reply); model.state = .ready
                 try? await Task.sleep(for: .milliseconds(900)); model.state = .idle
             } catch {
+                model.updateDelivery(messageID, .failed)
                 model.append(.yuki, error.localizedDescription); model.state = .error
             }
         }
-    }
-
-    private func returnFocusToWatchedApplication() {
-        let application = NSWorkspace.shared.runningApplications.first { $0.localizedName?.caseInsensitiveCompare(settings.watchedApplication) == .orderedSame }
-        application?.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
     }
 
     private func checkWorkChat() {
@@ -215,16 +217,59 @@ final class SettingsWindowController {
 
 @MainActor final class CompanionModel: ObservableObject {
     @Published var messages: [YukiChatMessage] = [] { didSet { persist() } }
-    @Published var draft = ""
+    @Published var draft = "" { didSet { UserDefaults.standard.set(draft, forKey: "yuki.draft") } }
     @Published var state: PetState = .idle
     @Published var focusComposer = 0
     @Published var includeAppWindow = false
+    @Published var connectionState: BridgeConnectionState = .connecting
+    private var streamingMessageByCommand: [UUID: UUID] = [:]
     init() {
-        if let data = UserDefaults.standard.data(forKey: "yuki.messages"), let saved = try? JSONDecoder().decode([YukiChatMessage].self, from: data) { messages = saved }
+        draft = UserDefaults.standard.string(forKey: "yuki.draft") ?? ""
+        if let data = UserDefaults.standard.data(forKey: "yuki.messages"), var saved = try? JSONDecoder().decode([YukiChatMessage].self, from: data) {
+            for index in saved.indices where saved[index].role == .user && [.queued, .delivered, .submitted, .responding].contains(saved[index].deliveryState) {
+                saved[index].deliveryState = .failed
+            }
+            messages = saved
+        }
     }
     func takeDraft() -> String? {
         let value = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }; draft = ""; return value
+    }
+    func enqueueUser(_ text: String) -> UUID {
+        let message = YukiChatMessage(role: .user, text: text, deliveryState: .queued)
+        messages.append(message)
+        return message.id
+    }
+    func updateDelivery(_ id: UUID, _ delivery: YukiChatMessage.DeliveryState) {
+        guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+        messages[index].deliveryState = delivery
+    }
+    func updateStreamingResponse(for commandID: UUID, text: String) {
+        guard !text.isEmpty else { return }
+        if let messageID = streamingMessageByCommand[commandID], let index = messages.firstIndex(where: { $0.id == messageID }) {
+            messages[index].text = text
+            messages[index].deliveryState = .responding
+        } else {
+            let message = YukiChatMessage(role: .yuki, text: text, deliveryState: .responding)
+            streamingMessageByCommand[commandID] = message.id
+            messages.append(message)
+        }
+    }
+    func completeStreamingResponse(for commandID: UUID, text: String) {
+        updateDelivery(commandID, .completed)
+        if let messageID = streamingMessageByCommand.removeValue(forKey: commandID), let index = messages.firstIndex(where: { $0.id == messageID }) {
+            messages[index].text = text
+            messages[index].deliveryState = .completed
+        } else {
+            messages.append(YukiChatMessage(role: .yuki, text: text, deliveryState: .completed))
+        }
+    }
+    func restoreDraft(from messageID: UUID) {
+        guard draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let message = messages.first(where: { $0.id == messageID && $0.role == .user }) else { return }
+        draft = message.text
+        focusComposer += 1
     }
     func append(_ role: YukiChatMessage.Role, _ text: String) { messages.append(YukiChatMessage(role: role, text: text)) }
     private func persist() { if let data = try? JSONEncoder().encode(Array(messages.suffix(200))) { UserDefaults.standard.set(data, forKey: "yuki.messages") } }

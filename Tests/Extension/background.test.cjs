@@ -15,8 +15,9 @@ function harness(bound = 7) {
       storage: { local: { get: async () => ({ boundTabId: bound }), set: async () => {}, remove() {} } },
       runtime: { onMessage: { addListener(fn) { listener = fn; } } },
       tabs: { get: async id => ({ id, url: 'https://chatgpt.com/c/example' }),
+        query: async () => [{ id: 7, url: 'https://chatgpt.com/c/example' }],
         sendMessage: async (id, command) => { delivered.push(command); return { type: 'response_complete', text: 'reply' }; },
-        onRemoved: { addListener() {} } },
+        onRemoved: { addListener() {} }, onUpdated: { addListener() {} } },
       scripting: { executeScript: async () => {} },
       alarms: { create() {}, onAlarm: { addListener() {} } }
     },
@@ -38,23 +39,30 @@ test('renews token after native restart and delivers consecutive messages', asyn
   h.queue.push({ type: 'send_message', id: 'a' }, { type: 'send_message', id: 'b' });
   await h.tick(); await h.tick();
   assert.deepEqual(h.delivered.map(x => x.id), ['a', 'b']);
-  assert.deepEqual(h.events.map(x => x.type), ['response_complete', 'response_complete']);
+  assert.deepEqual(h.events.filter(x => x.type === 'response_complete').map(x => x.type), ['response_complete', 'response_complete']);
 });
 test('unbound commands return an actionable error', async () => {
   const h = harness(null); await h.tick(); h.queue.push({ type: 'send_message', id: 'a' }); await h.tick();
-  assert.equal(h.events[0].type, 'error'); assert.match(h.events[0].message, /Bind this tab/);
+  const error = h.events.find(event => event.type === 'error'); assert.equal(error.type, 'error'); assert.match(error.message, /Bind this tab/);
 });
 test('binding installs receiver and confirms success', async () => {
   const h = harness(null); await h.tick();
   assert.equal((await h.message({ type: 'bind_tab', tabId: 7 })).ok, true);
   assert.equal((await h.message({ type: 'binding_status' })).boundTabId, 7);
 });
+test('reconnect command restores the saved binding without activating a tab', async () => {
+  const h = harness(); await h.tick();
+  h.queue.push({ type: 'reconnect' }); await h.tick();
+  assert.equal((await h.message({ type: 'binding_status' })).boundTabId, 7);
+  assert.equal(h.delivered.length, 0);
+  assert.equal(h.events.filter(event => event.type === 'bridge_status').at(-1).state, 'ready');
+});
 test('only bound tab can relay images and events', async () => {
   const h = harness(); await h.tick();
   assert.match((await h.message({ type: 'bridge_context', contextID: 'a' }, { tab: { id: 8 } })).error, /not bound/);
   assert.equal((await h.message({ type: 'bridge_context', contextID: 'a' }, { tab: { id: 7 } })).dataURL, 'data:image/png;base64,AQID');
   await h.message({ type: 'bridge_event', event: { type: 'response_complete', id: 'a' } }, { tab: { id: 7 } });
-  assert.equal(h.events[0].type, 'response_complete');
+  assert.equal(h.events.find(event => event.type === 'response_complete').type, 'response_complete');
 });
 test('reinjecting content script registers only one receiver', () => {
   let count = 0;
@@ -62,4 +70,35 @@ test('reinjecting content script registers only one receiver', () => {
   const content = fs.readFileSync('ChromeExtension/content.js', 'utf8');
   vm.runInContext(content, context); vm.runInContext(content, context);
   assert.equal(count, 1);
+});
+test('content receiver never submits the same message id twice', async () => {
+  let listener, clicks = 0;
+  class FakeTextarea {
+    constructor() { this.tagName = 'TEXTAREA'; this._value = ''; this.isContentEditable = false; }
+    closest() { return null; }
+    getBoundingClientRect() { return { width: 200, height: 40 }; }
+    getAttribute(name) { return name === 'placeholder' ? 'Message ChatGPT' : ''; }
+    dispatchEvent() {}
+  }
+  Object.defineProperty(FakeTextarea.prototype, 'value', { get() { return this._value; }, set(value) { this._value = value; } });
+  const textarea = new FakeTextarea();
+  const button = { disabled: false, focus() {}, dispatchEvent() {}, click() { clicks++; }, getAttribute() { return ''; }, innerText: '' };
+  const context = vm.createContext({
+    HTMLTextAreaElement: FakeTextarea,
+    document: {
+      body: {}, execCommand() {}, createElement() { return { textContent: '' }; },
+      querySelector(selector) { return selector.includes('composer-submit-button') ? button : null; },
+      querySelectorAll(selector) { if (selector.includes('textarea')) return [textarea]; if (selector.includes('button')) return [button]; return []; }
+    },
+    getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
+    InputEvent: class {}, Event: class {}, MouseEvent: class {}, KeyboardEvent: class {},
+    MutationObserver: class { observe() {} disconnect() {} },
+    setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {}, window: {},
+    chrome: { runtime: { onMessage: { addListener(fn) { listener = fn; } }, sendMessage: async () => ({}) } }
+  });
+  vm.runInContext(fs.readFileSync('ChromeExtension/content.js', 'utf8'), context);
+  const send = message => new Promise(resolve => listener(message, {}, resolve));
+  assert.equal((await send({ type: 'send_message', id: 'same', text: 'hello' })).state, 'submitted');
+  assert.equal((await send({ type: 'send_message', id: 'same', text: 'hello' })).state, 'submitted');
+  assert.equal(clicks, 1);
 });

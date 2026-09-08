@@ -21,13 +21,22 @@ public sealed class CompanionConfiguration
     public bool LaunchAtLogin { get; set; }
     public bool AutomaticLook { get; set; }
     public bool AutomaticUpdates { get; set; } = true;
+    public string Draft { get; set; } = "";
     public List<CompanionMessage> Messages { get; set; } = [];
 
     private static string Path => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "YukiCompanion", "config.json");
 
     public static CompanionConfiguration Load()
     {
-        try { if (File.Exists(Path)) return JsonSerializer.Deserialize<CompanionConfiguration>(File.ReadAllText(Path)) ?? new(); }
+        try
+        {
+            if (File.Exists(Path))
+            {
+                var configuration = JsonSerializer.Deserialize<CompanionConfiguration>(File.ReadAllText(Path)) ?? new();
+                foreach (var message in configuration.Messages.Where(value => value.Role.Equals("user", StringComparison.OrdinalIgnoreCase) && value.DeliveryState is "queued" or "delivered" or "submitted" or "responding")) message.DeliveryState = "failed";
+                return configuration;
+            }
+        }
         catch { /* Corrupt settings must not prevent launch; setup can repair them. */ }
         return new();
     }
@@ -41,8 +50,10 @@ public sealed class CompanionConfiguration
 
 public sealed class CompanionMessage
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Role { get; set; } = "yuki";
     public string Text { get; set; } = "";
+    public string? DeliveryState { get; set; }
 }
 
 public sealed class WatchedApplication

@@ -3,9 +3,11 @@ import SwiftUI
 
 struct YukiChatMessage: Identifiable, Codable, Equatable {
     enum Role: String, Codable { case user, yuki }
+    enum DeliveryState: String, Codable { case queued, delivered, submitted, responding, completed, failed }
     var id = UUID()
     let role: Role
     var text: String
+    var deliveryState: DeliveryState? = nil
 }
 
 @MainActor struct YukiChatView: View {
@@ -47,6 +49,9 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                     YukiMenuView(model: model, settings: settings, onCheckWorkChat: {
                         showMenu = false
                         onCheckWorkChat()
+                    }, onReconnect: {
+                        showMenu = false
+                        ChromeBridge.shared.reconnect()
                     }, onCheckForUpdates: {
                         showMenu = false
                         onCheckForUpdates()
@@ -66,14 +71,23 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                         ForEach(model.messages) { message in
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(message.role == .user ? "You:" : "\(companionName):").font(.caption.bold()).foregroundStyle(message.role == .user ? .pink : Color(red: 1, green: 0.72, blue: 0.87))
-                                Text(message.text).textSelection(.enabled)
+                                Text(renderedText(message.text)).textSelection(.enabled)
+                                if message.role == .user, let delivery = message.deliveryState, delivery != .completed {
+                                    HStack(spacing: 6) {
+                                        Text(delivery.label).font(.caption2).foregroundStyle(delivery == .failed ? .red : .secondary)
+                                        if delivery == .failed {
+                                            Button("Retry") { model.restoreDraft(from: message.id) }
+                                                .buttonStyle(.borderless).font(.caption2)
+                                        }
+                                    }
+                                }
                             }
                             .padding(10).background(message.role == .user ? Color.pink.opacity(0.18) : Color.white.opacity(0.075)).clipShape(RoundedRectangle(cornerRadius: 12))
                             .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading).id(message.id)
                         }
                     }.padding(12)
                 }
-                .onChange(of: model.messages) { messages in if let id = messages.last?.id { withAnimation { proxy.scrollTo(id, anchor: .bottom) } } }
+                .onChange(of: model.messages.map(\.id)) { ids in if let id = ids.last { withAnimation { proxy.scrollTo(id, anchor: .bottom) } } }
             }
             Divider().overlay(Color.pink.opacity(0.35))
             HStack(alignment: .bottom, spacing: 8) {
@@ -91,8 +105,35 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
         .frame(minWidth: 300, minHeight: 260).background(.black.opacity(0.86))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.pink.opacity(0.75), lineWidth: 1.5)).clipShape(RoundedRectangle(cornerRadius: 18)).foregroundStyle(.white)
     }
+    private func renderedText(_ value: String) -> AttributedString {
+        (try? AttributedString(markdown: value, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(value)
+    }
     private var status: String {
-        switch model.state { case .waiting, .opening: "thinking…"; case .replying: "replying…"; case .error: "a little confused"; default: "" }
+        switch model.state {
+        case .waiting, .opening: "Connecting…"
+        case .replying: "Yuki is replying…"
+        case .error: "Needs attention"
+        default:
+            switch model.connectionState {
+            case .connecting: "Connecting…"
+            case .ready: "Ready"
+            case .needsBinding: "Needs extension"
+            case .disconnected: "Disconnected"
+            }
+        }
+    }
+}
+
+private extension YukiChatMessage.DeliveryState {
+    var label: String {
+        switch self {
+        case .queued: "Sending…"
+        case .delivered: "Delivered"
+        case .submitted: "Sent"
+        case .responding: "Yuki is replying…"
+        case .completed: ""
+        case .failed: "Needs attention"
+        }
     }
 }
 
@@ -101,12 +142,23 @@ private struct YukiMenuView: View {
     @ObservedObject var model: CompanionModel
     @ObservedObject var settings: CompanionSettings
     let onCheckWorkChat: () -> Void
+    let onReconnect: () -> Void
     let onCheckForUpdates: () -> Void
     let onProvideFeedback: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Yuki menu").font(.headline).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.78))
+            Divider().overlay(Color.pink.opacity(0.35))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Connection").font(.caption.bold()).foregroundStyle(.secondary)
+                HStack {
+                    Circle().fill(connectionColor).frame(width: 7, height: 7)
+                    Text(connectionLabel).font(.caption)
+                    Spacer()
+                    Button("Reconnect", action: onReconnect).buttonStyle(.borderless)
+                }
+            }
             Divider().overlay(Color.pink.opacity(0.35))
             Button {
                 SetupGuideWindowController.shared.show()
@@ -159,6 +211,12 @@ private struct YukiMenuView: View {
         .background(.black.opacity(0.94))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.pink.opacity(0.75), lineWidth: 1.25))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+    private var connectionLabel: String {
+        switch model.connectionState { case .connecting: "Connecting"; case .ready: "Ready"; case .needsBinding: "Needs extension"; case .disconnected: "Disconnected" }
+    }
+    private var connectionColor: Color {
+        switch model.connectionState { case .ready: .green; case .connecting: .yellow; case .needsBinding, .disconnected: .pink }
     }
 }
 
