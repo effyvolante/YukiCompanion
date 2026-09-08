@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class UpdateService {
     static let shared = UpdateService()
-    static let currentVersion = "1.0.3"
+    static let currentVersion = "1.0.4"
     static let repositoryURL = URL(string: "https://github.com/effyvolante/YukiCompanion")!
     private static let releasesAPI = URL(string: "https://api.github.com/repos/effyvolante/YukiCompanion/releases/latest")!
 

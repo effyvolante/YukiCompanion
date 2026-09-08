@@ -198,24 +198,38 @@ private struct ComposerTextView: NSViewRepresentable {
         scroll.documentView = view; context.coordinator.view = view; return scroll
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
+        // NSViewRepresentable reuses the coordinator. Refresh its bindings and
+        // callbacks on every SwiftUI update; otherwise a long-lived composer
+        // can keep an older binding and appear visually stale until restart.
+        context.coordinator.parent = self
         guard let view = context.coordinator.view else { return }
         view.textColor = .white
         view.insertionPointColor = .white
         view.typingAttributes = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 14)]
         if view.string != text {
             let selectedRange = view.selectedRange()
+            context.coordinator.isSynchronizing = true
             view.string = text
+            context.coordinator.isSynchronizing = false
             let location = min(selectedRange.location, (text as NSString).length)
             view.setSelectedRange(NSRange(location: location, length: 0))
+            view.layoutManager?.ensureLayout(for: view.textContainer!)
+            view.needsDisplay = true
         }
         if context.coordinator.focusToken != focusToken {
             context.coordinator.focusToken = focusToken; DispatchQueue.main.async { view.window?.makeFirstResponder(view) }
         }
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
-        var parent: ComposerTextView; weak var view: NSTextView?; var focusToken = -1
+        var parent: ComposerTextView
+        weak var view: NSTextView?
+        var focusToken = -1
+        var isSynchronizing = false
         init(_ parent: ComposerTextView) { self.parent = parent }
-        func textDidChange(_ notification: Notification) { if let view { parent.text = view.string } }
+        func textDidChange(_ notification: Notification) {
+            guard !isSynchronizing, let view else { return }
+            parent.text = view.string
+        }
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             guard commandSelector == #selector(NSResponder.insertNewline(_:)), !NSEvent.modifierFlags.contains(.shift) else { return false }
             parent.onSend(); return true
