@@ -186,6 +186,11 @@ private struct ComposerTextView: NSViewRepresentable {
         view.isRichText = false
         view.isEditable = true
         view.isSelectable = true
+        view.isVerticallyResizable = true
+        view.isHorizontallyResizable = false
+        view.autoresizingMask = [.width]
+        view.minSize = NSSize(width: 0, height: 0)
+        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         view.font = .systemFont(ofSize: 14)
         view.textColor = .white
         view.insertionPointColor = .white
@@ -193,8 +198,10 @@ private struct ComposerTextView: NSViewRepresentable {
         view.backgroundColor = NSColor.white.withAlphaComponent(0.08)
         view.drawsBackground = true
         view.textContainerInset = NSSize(width: 7, height: 7)
+        view.textContainer?.lineFragmentPadding = 0
         view.textContainer?.widthTracksTextView = true
         view.string = text
+        applyVisibleTextAttributes(to: view)
         scroll.documentView = view; context.coordinator.view = view; return scroll
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
@@ -206,6 +213,7 @@ private struct ComposerTextView: NSViewRepresentable {
         view.textColor = .white
         view.insertionPointColor = .white
         view.typingAttributes = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 14)]
+        applyVisibleTextAttributes(to: view)
         if view.string != text {
             let selectedRange = view.selectedRange()
             context.coordinator.isSynchronizing = true
@@ -219,6 +227,14 @@ private struct ComposerTextView: NSViewRepresentable {
         if context.coordinator.focusToken != focusToken {
             context.coordinator.focusToken = focusToken; DispatchQueue.main.async { view.window?.makeFirstResponder(view) }
         }
+    }
+    private func applyVisibleTextAttributes(to view: NSTextView) {
+        let range = NSRange(location: 0, length: view.textStorage?.length ?? 0)
+        guard range.length > 0 else { return }
+        view.textStorage?.addAttributes([
+            .foregroundColor: NSColor.white,
+            .font: NSFont.systemFont(ofSize: 14)
+        ], range: range)
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: ComposerTextView
