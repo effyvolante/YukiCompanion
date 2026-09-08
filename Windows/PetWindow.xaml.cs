@@ -21,7 +21,7 @@ public partial class PetWindow : Window
         InitializeComponent();
         Icon = new BitmapImage(new Uri(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Yuki", "Idle", "idle_000.png"), UriKind.Absolute));
         this.chat = chat;
-        Closing += (_, _) => { chat.Close(); Application.Current.Shutdown(); };
+        Closing += (_, _) => { chat.Close(); System.Windows.Application.Current.Shutdown(); };
         chat.VisualStateChanged += SetState;
         chat.ThemeChanged += SetTheme;
         theme = chat.ThemeId;
