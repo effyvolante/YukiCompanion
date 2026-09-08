@@ -9,7 +9,7 @@ This folder is the shared extension for macOS and Windows. It works in Google Ch
 4. Choose **Load unpacked**, then select the folder containing `manifest.json` (this folder).
 5. Use the browser's puzzle-piece toolbar button to pin Yuki.
 6. Start the Yuki native app. Keep only one copy running.
-7. Open ChatGPT in your browser, sign in, and open or create your **Yuki — App Companion** conversation.
+7. Open ChatGPT in your browser, sign in, and open or create your **Yuki — App Companion** conversation. In Yuki's Settings, you can paste a pinned chat/GPT URL and choose Chrome, Edge, or your default browser; the app will open that destination in the background when it sends a message.
 8. While that tab is active, click the Yuki extension and choose **Bind this tab to Yuki**. Wait for confirmation.
 9. Send `hello yuki` from Yuki's chat. Keep the bound Chrome tab open.
 

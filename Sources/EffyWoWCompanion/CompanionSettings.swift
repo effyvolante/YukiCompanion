@@ -17,12 +17,15 @@ final class CompanionSettings: ObservableObject {
     }
     @Published var watchedApplication: String { didSet { save() } }
     @Published var chromeConversation: String { didSet { save() } }
+    @Published var chatURL: String { didSet { save() } }
+    @Published var browser: String { didSet { save() } }
+    @Published var backgroundBrowser: Bool { didSet { save() } }
     @Published var launchAtLogin: Bool { didSet { save(); applyLaunchAtLogin() } }
     @Published var automaticLook: Bool { didSet { save() } }
     @Published var automaticUpdates: Bool { didSet { save() } }
 
     private let defaults = UserDefaults.standard
-    private enum Key { static let name = "yuki.settings.displayName"; static let theme = "yuki.settings.themeID"; static let watched = "yuki.settings.watchedApplication"; static let conversation = "yuki.settings.chromeConversation"; static let launch = "yuki.settings.launchAtLogin"; static let look = "yuki.settings.automaticLook"; static let updates = "yuki.settings.automaticUpdates" }
+    private enum Key { static let name = "yuki.settings.displayName"; static let theme = "yuki.settings.themeID"; static let watched = "yuki.settings.watchedApplication"; static let conversation = "yuki.settings.chromeConversation"; static let chatURL = "yuki.settings.chatURL"; static let browser = "yuki.settings.browser"; static let backgroundBrowser = "yuki.settings.backgroundBrowser"; static let launch = "yuki.settings.launchAtLogin"; static let look = "yuki.settings.automaticLook"; static let updates = "yuki.settings.automaticUpdates" }
 
     private init() {
         companionDisplayName = defaults.string(forKey: Key.name) ?? "Yuki"
@@ -31,6 +34,9 @@ final class CompanionSettings: ObservableObject {
         watchedApplication = defaults.string(forKey: Key.watched) ?? ""
         let savedConversation = defaults.string(forKey: Key.conversation)
         chromeConversation = savedConversation == "Yuki — WoW Companion" ? "Yuki — App Companion" : (savedConversation ?? "Yuki — App Companion")
+        chatURL = defaults.string(forKey: Key.chatURL) ?? "https://chatgpt.com/"
+        browser = defaults.string(forKey: Key.browser) ?? "default"
+        backgroundBrowser = defaults.object(forKey: Key.backgroundBrowser) as? Bool ?? true
         launchAtLogin = defaults.bool(forKey: Key.launch)
         automaticLook = defaults.bool(forKey: Key.look)
         automaticUpdates = defaults.object(forKey: Key.updates) as? Bool ?? true
@@ -39,6 +45,7 @@ final class CompanionSettings: ObservableObject {
     private func save() {
         defaults.set(companionDisplayName, forKey: Key.name); defaults.set(themeID, forKey: Key.theme)
         defaults.set(watchedApplication, forKey: Key.watched); defaults.set(chromeConversation, forKey: Key.conversation)
+        defaults.set(chatURL, forKey: Key.chatURL); defaults.set(browser, forKey: Key.browser); defaults.set(backgroundBrowser, forKey: Key.backgroundBrowser)
         defaults.set(launchAtLogin, forKey: Key.launch); defaults.set(automaticLook, forKey: Key.look); defaults.set(automaticUpdates, forKey: Key.updates)
     }
 
@@ -77,6 +84,13 @@ struct CompanionSettingsView: View {
                     Button("Refresh", action: refreshApplications).buttonStyle(.borderless)
                 }
                 TextField("Chrome conversation", text: $settings.chromeConversation)
+                TextField("Chat URL", text: $settings.chatURL)
+                Picker("Browser", selection: $settings.browser) {
+                    Text("Default browser").tag("default")
+                    Text("Google Chrome").tag("chrome")
+                    Text("Microsoft Edge").tag("edge")
+                }
+                Toggle("Keep ChatGPT in the background", isOn: $settings.backgroundBrowser)
                 Toggle("Look automatically for visual questions", isOn: $settings.automaticLook)
                 Text("Look captures only the selected application’s visible window, never the desktop. Screen Recording permission is required.").font(.footnote).foregroundStyle(.secondary)
             }

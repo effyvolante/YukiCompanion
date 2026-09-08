@@ -54,7 +54,7 @@ The package includes the SwiftPM executable, Yuki animation resources, a valid a
 4. Select the matching `ChromeExtension` or `EdgeExtension` folder.
 5. In your browser, open the existing **Yuki — App Companion** conversation.
 6. Click the Yuki extension icon and choose **Bind this tab to Yuki**.
-7. Leave the browser open and unminimized while the selected app is visible elsewhere.
+7. Leave the browser signed in. Yuki can open the configured ChatGPT URL in the background when sending; the browser may still need to come forward for sign-in, MFA, CAPTCHA, or extension setup.
 
 Then open Yuki’s bubble and send `hello yuki`.
 

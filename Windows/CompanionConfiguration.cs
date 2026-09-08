@@ -14,6 +14,9 @@ public sealed class CompanionConfiguration
         set => themeId = value is "Yuki" or "Peaches" ? value : "Yuki";
     }
     public string ChromeConversation { get; set; } = "Yuki — App Companion";
+    public string ChatUrl { get; set; } = "https://chatgpt.com/";
+    public string Browser { get; set; } = "default";
+    public bool BackgroundBrowser { get; set; } = true;
     public WatchedApplication? WatchedApplication { get; set; }
     public double Size { get; set; } = 180;
     public double BubbleWidth { get; set; } = 360;

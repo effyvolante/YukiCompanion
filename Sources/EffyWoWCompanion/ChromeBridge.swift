@@ -36,7 +36,7 @@ final class ChromeBridge {
         }
     }
 
-    func send(_ text: String, imageData: Data? = nil, onSubmitted: @escaping @MainActor () -> Void = {}, onReplyDetected: @escaping @MainActor () -> Void) async throws -> String {
+    func send(_ text: String, imageData: Data? = nil, chatURL: String? = nil, onSubmitted: @escaping @MainActor () -> Void = {}, onReplyDetected: @escaping @MainActor () -> Void) async throws -> String {
         start()
         let id = UUID().uuidString
         return try await withCheckedThrowingContinuation { continuation in
@@ -44,6 +44,7 @@ final class ChromeBridge {
                 guard let self else { return }
                 self.pending[id] = Pending(onSubmitted: onSubmitted, onReply: onReplyDetected, continuation: continuation)
                 var command = ["type": "send_message", "id": id, "text": text, "token": self.sessionToken]
+                if let chatURL, !chatURL.isEmpty { command["chatURL"] = chatURL }
                 if let imageData { self.contexts[id] = imageData; command["contextID"] = id }
                 self.commands.append(command)
                 try? await Task.sleep(for: .seconds(120))
