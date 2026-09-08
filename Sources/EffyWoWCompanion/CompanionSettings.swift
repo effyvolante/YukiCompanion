@@ -20,9 +20,13 @@ final class CompanionSettings: ObservableObject {
     @Published var launchAtLogin: Bool { didSet { save(); applyLaunchAtLogin() } }
     @Published var automaticLook: Bool { didSet { save() } }
     @Published var automaticUpdates: Bool { didSet { save() } }
+    @Published var accentColorID: String { didSet { save() } }
+    @Published var personalityTone: String { didSet { save() } }
+    @Published var responseStyle: String { didSet { save() } }
+    @Published var proactivity: String { didSet { save() } }
 
     private let defaults = UserDefaults.standard
-    private enum Key { static let name = "yuki.settings.displayName"; static let theme = "yuki.settings.themeID"; static let watched = "yuki.settings.watchedApplication"; static let conversation = "yuki.settings.chromeConversation"; static let launch = "yuki.settings.launchAtLogin"; static let look = "yuki.settings.automaticLook"; static let updates = "yuki.settings.automaticUpdates" }
+    private enum Key { static let name = "yuki.settings.displayName"; static let theme = "yuki.settings.themeID"; static let watched = "yuki.settings.watchedApplication"; static let conversation = "yuki.settings.chromeConversation"; static let launch = "yuki.settings.launchAtLogin"; static let look = "yuki.settings.automaticLook"; static let updates = "yuki.settings.automaticUpdates"; static let accent = "yuki.settings.accentColorID"; static let tone = "yuki.settings.personalityTone"; static let style = "yuki.settings.responseStyle"; static let proactive = "yuki.settings.proactivity" }
 
     private init() {
         companionDisplayName = defaults.string(forKey: Key.name) ?? "Yuki"
@@ -34,12 +38,18 @@ final class CompanionSettings: ObservableObject {
         launchAtLogin = defaults.bool(forKey: Key.launch)
         automaticLook = defaults.bool(forKey: Key.look)
         automaticUpdates = defaults.object(forKey: Key.updates) as? Bool ?? true
+        accentColorID = defaults.string(forKey: Key.accent) ?? "pink"
+        personalityTone = defaults.string(forKey: Key.tone) ?? "Warm and companionable"
+        responseStyle = defaults.string(forKey: Key.style) ?? "Clear and conversational"
+        proactivity = defaults.string(forKey: Key.proactive) ?? "Only when I ask"
     }
 
     private func save() {
         defaults.set(companionDisplayName, forKey: Key.name); defaults.set(themeID, forKey: Key.theme)
         defaults.set(watchedApplication, forKey: Key.watched); defaults.set(chromeConversation, forKey: Key.conversation)
         defaults.set(launchAtLogin, forKey: Key.launch); defaults.set(automaticLook, forKey: Key.look); defaults.set(automaticUpdates, forKey: Key.updates)
+        defaults.set(accentColorID, forKey: Key.accent); defaults.set(personalityTone, forKey: Key.tone)
+        defaults.set(responseStyle, forKey: Key.style); defaults.set(proactivity, forKey: Key.proactive)
     }
 
     private func applyLaunchAtLogin() {
@@ -64,6 +74,13 @@ struct CompanionSettingsView: View {
                     ForEach(CompanionTheme.available) { theme in
                         Text(theme.menuLabel).tag(theme.id)
                     }
+                }
+                Picker("Accent", selection: $settings.accentColorID) {
+                    Text("Yuki pink").tag("pink")
+                    Text("Lavender").tag("lavender")
+                    Text("Mint").tag("mint")
+                    Text("Golden").tag("gold")
+                    Text("Peach").tag("peach")
                 }
             }
             Section("Context") {

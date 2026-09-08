@@ -45,6 +45,7 @@ final class CompanionModelTests: XCTestCase {
 
     func testRetryRestoresFailedMessageWithoutOverwritingANewDraft() {
         UserDefaults.standard.removeObject(forKey: transcriptKey)
+        UserDefaults.standard.removeObject(forKey: "yuki.draft")
         let model = CompanionModel()
         let id = model.enqueueUser("try this again")
         model.updateDelivery(id, .failed)

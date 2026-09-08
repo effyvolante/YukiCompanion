@@ -18,10 +18,10 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
     let onCheckWorkChat: () -> Void
     let onCheckForUpdates: () -> Void
     let onProvideFeedback: () -> Void
+    let onOpenMenu: () -> Void
     let onClose: () -> Void
-    @State private var showMenu = false
 
-    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onCheckForUpdates: @escaping () -> Void = {}, onProvideFeedback: @escaping () -> Void = {}, onClose: @escaping () -> Void) {
+    init(model: CompanionModel, settings: CompanionSettings, companionName: String = "Yuki", onSend: @escaping () -> Void, onCheckWorkChat: @escaping () -> Void, onCheckForUpdates: @escaping () -> Void = {}, onProvideFeedback: @escaping () -> Void = {}, onOpenMenu: @escaping () -> Void = {}, onClose: @escaping () -> Void) {
         self.model = model
         self.settings = settings
         self.companionName = companionName
@@ -29,6 +29,7 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
         self.onCheckWorkChat = onCheckWorkChat
         self.onCheckForUpdates = onCheckForUpdates
         self.onProvideFeedback = onProvideFeedback
+        self.onOpenMenu = onOpenMenu
         self.onClose = onClose
     }
 
@@ -39,27 +40,12 @@ struct YukiChatMessage: Identifiable, Codable, Equatable {
                 Text(status).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button {
-                    showMenu.toggle()
+                    onOpenMenu()
                 } label: {
                     Image(systemName: "ellipsis.circle").foregroundStyle(.pink)
                 }
                 .buttonStyle(.plain)
                 .help("Yuki menu")
-                .popover(isPresented: $showMenu, arrowEdge: .top) {
-                    YukiMenuView(model: model, settings: settings, onCheckWorkChat: {
-                        showMenu = false
-                        onCheckWorkChat()
-                    }, onReconnect: {
-                        showMenu = false
-                        ChromeBridge.shared.reconnect()
-                    }, onCheckForUpdates: {
-                        showMenu = false
-                        onCheckForUpdates()
-                    }, onProvideFeedback: {
-                        showMenu = false
-                        onProvideFeedback()
-                    })
-                }
                 Button(action: onCheckWorkChat) { Image(systemName: "link").foregroundStyle(.pink) }.buttonStyle(.plain).help("Open and confirm Yuki’s App Companion chat")
                 Button("×", action: onClose).buttonStyle(.plain).font(.title2)
             }.padding(.horizontal, 14).padding(.vertical, 10)

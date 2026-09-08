@@ -111,7 +111,7 @@ final class SettingsWindowController {
         dragView.moved = { [weak self] in self?.savePetFrame(); self?.repositionBubble() }
         dragView.resized = { [weak self] delta in self?.resizePet(by: delta) }
         petPanel.contentView = dragView
-        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onProvideFeedback: { FeedbackService.openForm() }, onClose: { [weak self] in self?.toggleBubble() }))
+        chatPanel.contentView = NSHostingView(rootView: YukiChatView(model: model, settings: settings, companionName: settings.companionDisplayName, onSend: { [weak self] in self?.send() }, onCheckWorkChat: { [weak self] in self?.checkWorkChat() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onProvideFeedback: { FeedbackService.openForm() }, onOpenMenu: { [weak self] in self?.openMenu() }, onClose: { [weak self] in self?.toggleBubble() }))
         ChromeBridge.shared.onConnectionStateChanged = { [weak model] state in model?.connectionState = state }
 
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
@@ -191,6 +191,15 @@ final class SettingsWindowController {
                 model.append(.yuki, error.localizedDescription); model.state = .error
             }
         }
+    }
+
+    private func openMenu() {
+        YukiMenuWindowController.shared.show(model: model, settings: settings, onSendPrompt: { [weak self] prompt in self?.sendPrompt(prompt) }, onReconnect: { ChromeBridge.shared.reconnect() }, onCheckForUpdates: { UpdateService.shared.check(manual: true) }, onProvideFeedback: { FeedbackService.openForm() })
+    }
+
+    private func sendPrompt(_ prompt: String) {
+        model.draft = prompt
+        send()
     }
 
     private func checkWorkChat() {
