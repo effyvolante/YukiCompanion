@@ -19,10 +19,6 @@ public partial class SettingsWindow : Window
         this.configuration = configuration;
         NameBox.Text = configuration.CompanionDisplayName;
         ConversationBox.Text = configuration.ChromeConversation;
-        ChatUrlBox.Text = configuration.ChatUrl;
-        BrowserBox.ItemsSource = BrowserChoice.All;
-        BrowserBox.SelectedValue = configuration.Browser;
-        BackgroundBrowserBox.IsChecked = configuration.BackgroundBrowser;
         AutomaticLookBox.IsChecked = configuration.AutomaticLook;
         LaunchAtLoginBox.IsChecked = configuration.LaunchAtLogin;
         AutomaticUpdatesBox.IsChecked = configuration.AutomaticUpdates;
@@ -50,9 +46,6 @@ public partial class SettingsWindow : Window
         configuration.CompanionDisplayName = NameBox.Text.Trim();
         configuration.ThemeId = (ThemeBox.SelectedValue as string) ?? "Yuki";
         configuration.ChromeConversation = ConversationBox.Text.Trim().Length == 0 ? "Yuki — App Companion" : ConversationBox.Text.Trim();
-        configuration.ChatUrl = Uri.TryCreate(ChatUrlBox.Text.Trim(), UriKind.Absolute, out var chatUrl) && chatUrl.Scheme == Uri.UriSchemeHttps && (chatUrl.Host.Equals("chatgpt.com", StringComparison.OrdinalIgnoreCase) || chatUrl.Host.Equals("chat.openai.com", StringComparison.OrdinalIgnoreCase)) ? chatUrl.ToString() : "https://chatgpt.com/";
-        configuration.Browser = (BrowserBox.SelectedValue as string) ?? "default";
-        configuration.BackgroundBrowser = BackgroundBrowserBox.IsChecked != false;
         configuration.AutomaticLook = AutomaticLookBox.IsChecked == true;
         configuration.LaunchAtLogin = LaunchAtLoginBox.IsChecked == true;
         configuration.AutomaticUpdates = AutomaticUpdatesBox.IsChecked != false;
@@ -92,11 +85,6 @@ public partial class SettingsWindow : Window
             new("Yuki", "Yuki — Pink octopus"),
             new("Peaches", "Peaches — BETA · Cream bunny")
         ];
-    }
-
-    private sealed record BrowserChoice(string Id, string Name)
-    {
-        public static readonly BrowserChoice[] All = [new("default", "Default browser"), new("chrome", "Google Chrome"), new("edge", "Microsoft Edge")];
     }
 
 }

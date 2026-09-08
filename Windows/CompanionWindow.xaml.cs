@@ -89,8 +89,7 @@ public partial class CompanionWindow : Window
                 image = capture.Png;
                 outbound = $"[Full {watched.DisplayName} window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is approximately {Math.Clamp(capture.Cursor.X * 100 / Math.Max(1, capture.Window.Bounds.Width), 0, 100)}% from the left and {Math.Clamp(capture.Cursor.Y * 100 / Math.Max(1, capture.Window.Bounds.Height), 0, 100)}% from the top.]\n{text}";
             }
-            BrowserLaunchService.OpenChat(configuration.ChatUrl, configuration.Browser, configuration.BackgroundBrowser);
-            await bridge.SendAsync(outbound, image, configuration.ChatUrl);
+            await bridge.SendAsync(outbound, image);
         }
         catch (Exception error) { AppendMessage("yuki", $"Error: {error.Message}"); Status.Text = "needs attention"; VisualStateChanged?.Invoke("error"); }
         finally { LookButton.IsEnabled = true; }

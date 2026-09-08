@@ -25,7 +25,7 @@ public sealed class ChromeBridgeClient : IDisposable
     {
         listener.Prefixes.Add($"http://127.0.0.1:{port}/"); listener.Start(); _ = ServeAsync();
     }
-    public async Task SendAsync(string text, byte[]? contextImage = null, string? chatUrl = null, CancellationToken cancellationToken = default)
+    public async Task SendAsync(string text, byte[]? contextImage = null, CancellationToken cancellationToken = default)
     {
         var id = Guid.NewGuid().ToString();
         var contextId = contextImage is null ? null : Guid.NewGuid().ToString();
@@ -34,7 +34,7 @@ public sealed class ChromeBridgeClient : IDisposable
         {
             pending[id] = completion;
             if (contextId is not null) contexts[contextId] = contextImage!;
-            commands.Enqueue(new { type = "send_message", id, text, contextID = contextId, token, chatURL = chatUrl });
+            commands.Enqueue(new { type = "send_message", id, text, contextID = contextId, token });
         }
         try { var result = await completion.Task.WaitAsync(TimeSpan.FromMinutes(2), cancellationToken); if (result.Type == "response_complete") ReplyReceived?.Invoke(result.Text ?? ""); else ErrorReceived?.Invoke(result.Message ?? "Chrome bridge error."); }
         catch (OperationCanceledException) { ErrorReceived?.Invoke("The Chrome request was cancelled."); }

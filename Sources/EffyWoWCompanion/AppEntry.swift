@@ -175,8 +175,7 @@ final class SettingsWindowController {
                     imageData = capture.png
                     outbound = "[Full \(settings.watchedApplication) window attached. Use the entire image as visual context and identify the specific thing described in the user’s question. Cursor position is only supplementary context: approximately \(Int(capture.cursor.normalizedX * 100))% from the left and \(Int(capture.cursor.normalizedY * 100))% from the top.]\n\(text)"
                 }
-                BrowserLaunchService.openChat(urlString: settings.chatURL, browser: settings.browser, inBackground: settings.backgroundBrowser)
-                let reply = try await ChromeBridge.shared.send(outbound, imageData: imageData, chatURL: settings.chatURL, onSubmitted: { [weak self] in
+                let reply = try await ChromeBridge.shared.send(outbound, imageData: imageData, onSubmitted: { [weak self] in
                     self?.returnFocusToWatchedApplication()
                 }) { [weak model] in model?.state = .replying }
                 model.append(.yuki, reply); model.state = .ready

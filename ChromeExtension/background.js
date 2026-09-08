@@ -26,61 +26,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await bindingReady;
       const tab = await chrome.tabs.get(sender.tab?.id ?? message.tabId);
       if (!/^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(tab.url || "")) throw new Error("Choose a ChatGPT tab in Chrome first.");
-      await bindTab(tab);
+      // Install the shared receiver before confirming the binding.
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+      boundTabId = tab.id;
+      await chrome.storage.local.set({ boundTabId, boundUrl: tab.url });
       sendResponse({ ok: true });
     })().catch(error => sendResponse({ ok: false, message: error.message }));
   }
   if (message.type === "binding_status") bindingReady.then(() => sendResponse({ boundTabId }));
   return true;
 });
-async function bindTab(tab) {
-  if (!tab?.id || !/^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(tab.url || "")) throw new Error("Choose a ChatGPT tab first.");
-  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
-  boundTabId = tab.id;
-  await chrome.storage.local.set({ boundTabId, boundUrl: tab.url });
-}
-async function bindConfiguredChat(chatURL) {
-  if (!chatURL) return false;
-  const target = new URL(chatURL);
-  const tabs = await chrome.tabs.query({});
-  const tab = tabs.find(candidate => {
-    if (!candidate.url || candidate.url.startsWith("chrome://") || candidate.url.startsWith("edge://")) return false;
-    if (candidate.url === chatURL) return true;
-    return target.pathname === "/" && candidate.url.startsWith(target.origin + "/");
-  });
-  if (!tab) return false;
-  await bindTab(tab);
-  return true;
-}
 let polling = false;
-let waitingCommand = null;
 async function poll() {
   if (polling) return;
   polling = true;
   try {
     await bindingReady;
-    let command = waitingCommand;
-    if (!command) {
-      const response = await bridgeFetch("/commands", { cache: "no-store" });
-      if (!response.ok) throw new Error("Bridge unavailable");
-      command = await response.json();
-    }
-    if (command.type !== "send_message") { waitingCommand = null; return; }
-    if (boundTabId == null && command.chatURL) {
-      try {
-        if (await bindConfiguredChat(command.chatURL)) waitingCommand = null;
-        else { waitingCommand = command; return; }
-      } catch (_) {
-        waitingCommand = command;
-        return;
-      }
-    }
+    const response = await bridgeFetch("/commands", { cache: "no-store" });
+    if (!response.ok) throw new Error("Bridge unavailable");
+    const command = await response.json();
+    if (command.type !== "send_message") return;
     if (boundTabId == null) {
-      waitingCommand = null;
       await postEvent({ type: "error", id: command.id, message: "No ChatGPT tab is bound. Open your conversation in Chrome, click the Yuki extension, and choose Bind this tab to Yuki." });
       return;
     }
-    waitingCommand = null;
     await deliver(command);
   } catch (_) { sessionToken = null; }
   finally { polling = false; }

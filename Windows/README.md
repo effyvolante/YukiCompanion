@@ -17,7 +17,7 @@ This is the Windows desktop client for Yuki App Companion. It uses the same loca
 
 Yuki discovers visible top-level windows and stores both the application process name and selected window title. Look captures only that window, never the desktop. Normal visible windows are captured with `PrintWindow`; when a GPU-rendered app declines that request, Yuki falls back to copying the selected window's screen bounds. Minimized or closed windows are rejected and the app explains how to recover.
 
-Settings are stored per user under `%APPDATA%\YukiCompanion\config.json`. The settings window can refresh the list of every currently open visible window, change the companion name/theme, choose the pinned ChatGPT/GPT URL, choose Chrome, Edge, or the default browser, keep that browser in the background, and control Automatic Look and startup behavior. The package also includes `ChatGPT-Setup-Prompt.txt`, a copyable setup and troubleshooting prompt for ChatGPT.
+Settings are stored per user under `%APPDATA%\YukiCompanion\config.json`. The settings window can refresh the list of every currently open visible window, change the companion name/theme, choose the browser conversation label, and control Automatic Look and startup behavior. The package also includes `ChatGPT-Setup-Prompt.txt`, a copyable setup and troubleshooting prompt for ChatGPT.
 
 Yuki checks the latest published release on GitHub when it opens if **Check for updates automatically** is enabled. Use **Check now** in Settings to check immediately. When an update is found, Yuki opens the matching Windows ZIP download; close Yuki, replace the extracted app folder, and start the new copy.
 
