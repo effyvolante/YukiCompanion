@@ -1,0 +1,26 @@
+YUKI COMPANION — START HERE
+
+Please do these steps in order. You only need to do them once.
+
+1. Open the folder you downloaded and double-click YukiCompanion.exe.
+2. Follow the setup window. When it asks what Yuki can see:
+   - Open Minecraft first.
+   - Press “Refresh open windows”.
+   - Choose the row that says Minecraft and the game window title.
+   - Do not choose Minecraft Launcher.
+3. Open Microsoft Edge and type edge://extensions in the address bar.
+   Turn on Developer mode, click Load unpacked, and choose the EdgeExtension
+   folder that came with this download.
+4. Open ChatGPT in Edge. Open the chat called “Yuki — App Companion”.
+   Click the Yuki extension button and choose “Bind this tab to Yuki”.
+5. Go back to Yuki. Type a message. Press the eye button when you want her to
+   look at Minecraft.
+
+If Minecraft is not in the list:
+   Keep Minecraft open, open Yuki’s Settings, press Refresh, and choose the
+   Minecraft game window. If you are unsure, choose the row with Minecraft in
+   its name but not the words Launcher or Yuki.
+
+If something goes wrong, do not reinstall everything. First close and reopen
+Yuki, refresh the Edge extension, refresh the ChatGPT page, and bind the tab
+again. More help is in ChatGPT-Setup-Prompt.txt and README-Windows.md.

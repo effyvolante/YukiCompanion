@@ -70,6 +70,7 @@ jobs:
           Copy-Item ChromeExtension/README-Edge.md (Join-Path $publish "EdgeExtension/README.md") -Force
           Copy-Item Windows/README.md (Join-Path $publish "README-Windows.md") -Force
           Copy-Item Windows/ChatGPT-Setup-Prompt.txt (Join-Path $publish "ChatGPT-Setup-Prompt.txt") -Force
+          Copy-Item Windows/START-HERE.txt (Join-Path $publish "START-HERE.txt") -Force
           Compress-Archive -Path (Join-Path $publish "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "YukiCompanion-Windows.zip") -Force
       - name: Upload Windows app artifact
         uses: actions/upload-artifact@v4
