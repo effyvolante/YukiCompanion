@@ -202,6 +202,6 @@ public partial class CompanionWindow : Window
         "responding" => "Yuki is replying…",
         "failed" => "Needs attention",
         _ => ""
-    }
+    };
 
 }
