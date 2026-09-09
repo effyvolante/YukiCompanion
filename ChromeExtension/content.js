@@ -10,6 +10,7 @@ function composer() {
   return candidates.find(e => { const label = `${e.getAttribute("aria-label") || ""} ${e.getAttribute("placeholder") || ""}`.toLowerCase(); return visible(e) && !e.closest("nav") && (label.includes("message") || label.includes("ask") || label.includes("chat")); });
 }
 function composerText(element) { return element?.tagName === "TEXTAREA" ? element.value : (element?.innerText || element?.textContent || ""); }
+function normalizedText(text) { return (text || "").replace(/\s+/g, " ").trim(); }
 function setExactText(element, text) {
   if (!element) return false;
   if (element.tagName === "TEXTAREA") Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(element, text);
@@ -60,54 +61,58 @@ function sendButton(element) {
   }) || scope.querySelector('button[type="submit"], [data-testid*="send"], [data-testid*="submit"]');
 }
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-async function waitForComposerClear(element, timeout = 2200) {
-  const started = Date.now();
-  while (Date.now() - started < timeout) {
-    if (!composerText(element).trim()) return true;
-    await delay(100);
-  }
-  return false;
-}
 function activateButton(button) {
   if (!button || button.disabled) return false;
   button.focus();
-  // ChatGPT normally handles a click, but dispatching the complete pointer
-  // sequence also covers builds that attach the handler on pointerup.
-  for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) {
-    button.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-  }
+  // One click must represent one Yuki command. A synthetic pointer sequence
+  // followed by click can invoke multiple handlers in some ChatGPT builds.
   button.click();
   return true;
 }
-async function submitComposer(element, hasImage = false) {
-  const button = sendButton(element);
-  if (button && !button.disabled) {
-    // ChatGPT's composer is asynchronous. In particular, current builds can
-    // keep the submitted text/attachment mounted while the request is being
-    // accepted, even though the click has already created the user turn. The
-    // response watcher below is the reliable completion signal; requiring the
-    // composer to clear here creates a false "kept the draft" error and can
-    // cause a duplicate submission through the fallback paths.
-    if (activateButton(button)) {
-      // The click itself is the submission signal. Waiting for ChatGPT to
-      // clear the composer makes Yuki feel slow and can block on tabs that
-      // stream or render in the background.
-      await delay(hasImage ? 180 : 80);
-      return "button";
-    }
+function userTurns() {
+  return [...document.querySelectorAll('[data-message-author-role="user"]')]
+    .map(node => normalizedText(node.innerText || node.textContent || ""))
+    .filter(Boolean);
+}
+async function waitForReadySendButton(element, timeout = 2500) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    const button = sendButton(composer() || element);
+    if (button && !button.disabled) return button;
+    await delay(50);
+  }
+  return null;
+}
+function submissionObserved(element, message, beforeUserTurns) {
+  const currentComposer = composer() || element;
+  const currentText = normalizedText(composerText(currentComposer));
+  if (!currentText || currentText !== normalizedText(message)) return true;
+  const turns = userTurns();
+  return turns.length > beforeUserTurns.length && turns.at(-1) === normalizedText(message);
+}
+async function waitForSubmission(element, message, beforeUserTurns, timeout) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    if (submissionObserved(element, message, beforeUserTurns)) return true;
+    await delay(75);
+  }
+  return false;
+}
+async function submitComposer(element, message, beforeUserTurns, hasImage = false) {
+  const button = await waitForReadySendButton(element, hasImage ? 4500 : 2500);
+  if (activateButton(button)) {
+    return await waitForSubmission(element, message, beforeUserTurns, hasImage ? 5000 : 3500) ? "button" : null;
   }
   const form = element?.closest("form");
   if (form?.requestSubmit) {
     form.requestSubmit();
-    await delay(120);
-    return "form";
+    return await waitForSubmission(element, message, beforeUserTurns, 3500) ? "form" : null;
   }
   // This is a DOM event delivered to the verified ChatGPT composer, not a
   // global macOS keystroke and cannot reach WoW.
   element.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
   element.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
-  await delay(120);
-  return "enter";
+  return await waitForSubmission(element, message, beforeUserTurns, 3500) ? "enter" : null;
 }
 function assistantTurns() {
   const explicit = [...document.querySelectorAll('[data-message-author-role="assistant"]')];
@@ -191,11 +196,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   activeMessages.set(message.id, "processing");
   const baseline = assistantTurns();
+  const beforeUserTurns = userTurns();
   (async () => {
     if (!(await attachContextImage(message.contextID, message.token))) throw new Error("context_attachment");
     const target = composer();
     if (!target || !setExactText(target, message.text)) { sendResponse({ type: "error", message: "I couldn’t find ChatGPT’s message box." }); return; }
-    return submitComposer(target, Boolean(message.contextID));
+    return submitComposer(target, message.text, beforeUserTurns, Boolean(message.contextID));
   })().then(submissionMethod => {
     if (!submissionMethod) { activeMessages.delete(message.id); sendResponse({ type: "error", message: "ChatGPT kept the draft instead of submitting it." }); return; }
     activeMessages.set(message.id, "submitted");

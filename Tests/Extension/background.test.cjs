@@ -82,7 +82,7 @@ test('content receiver never submits the same message id twice', async () => {
   }
   Object.defineProperty(FakeTextarea.prototype, 'value', { get() { return this._value; }, set(value) { this._value = value; } });
   const textarea = new FakeTextarea();
-  const button = { disabled: false, focus() {}, dispatchEvent() {}, click() { clicks++; }, getAttribute() { return ''; }, innerText: '' };
+  const button = { disabled: false, focus() {}, dispatchEvent() {}, click() { clicks++; textarea.value = ''; }, getAttribute() { return ''; }, innerText: '' };
   const context = vm.createContext({
     HTMLTextAreaElement: FakeTextarea,
     document: {
@@ -101,4 +101,38 @@ test('content receiver never submits the same message id twice', async () => {
   assert.equal((await send({ type: 'send_message', id: 'same', text: 'hello' })).state, 'submitted');
   assert.equal((await send({ type: 'send_message', id: 'same', text: 'hello' })).state, 'submitted');
   assert.equal(clicks, 1);
+});
+test('content receiver waits for ChatGPT readiness and submits consecutive messages exactly once', async () => {
+  let listener, clicks = 0;
+  class FakeTextarea {
+    constructor() { this.tagName = 'TEXTAREA'; this._value = ''; this.isContentEditable = false; }
+    closest() { return null; }
+    getBoundingClientRect() { return { width: 200, height: 40 }; }
+    getAttribute(name) { return name === 'placeholder' ? 'Message ChatGPT' : ''; }
+    dispatchEvent() {}
+  }
+  Object.defineProperty(FakeTextarea.prototype, 'value', { get() { return this._value; }, set(value) { this._value = value; } });
+  const textarea = new FakeTextarea();
+  const button = { disabled: true, focus() {}, click() { clicks++; textarea.value = ''; }, getAttribute() { return ''; }, innerText: '' };
+  const context = vm.createContext({
+    HTMLTextAreaElement: FakeTextarea,
+    document: {
+      body: {}, execCommand() {}, createElement() { return { textContent: '' }; },
+      querySelector(selector) { return selector.includes('composer-submit-button') ? button : null; },
+      querySelectorAll(selector) { if (selector.includes('textarea')) return [textarea]; if (selector.includes('button')) return [button]; return []; }
+    },
+    getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
+    InputEvent: class {}, Event: class {}, MouseEvent: class {}, KeyboardEvent: class {},
+    MutationObserver: class { observe() {} disconnect() {} },
+    setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {}, window: {},
+    chrome: { runtime: { onMessage: { addListener(fn) { listener = fn; } }, sendMessage: async () => ({}) } }
+  });
+  vm.runInContext(fs.readFileSync('ChromeExtension/content.js', 'utf8'), context);
+  const send = message => new Promise(resolve => listener(message, {}, resolve));
+  setTimeout(() => { button.disabled = false; }, 125);
+  assert.equal((await send({ type: 'send_message', id: 'first', text: 'first' })).state, 'submitted');
+  button.disabled = true;
+  setTimeout(() => { button.disabled = false; }, 125);
+  assert.equal((await send({ type: 'send_message', id: 'second', text: 'second' })).state, 'submitted');
+  assert.equal(clicks, 2);
 });
