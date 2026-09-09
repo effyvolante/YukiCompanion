@@ -13,7 +13,7 @@ function harness(bound = 7) {
     setInterval() {},
     chrome: {
       storage: { local: { get: async () => ({ boundTabId: bound }), set: async () => {}, remove() {} } },
-      runtime: { onMessage: { addListener(fn) { listener = fn; } } },
+      runtime: { onMessage: { addListener(fn) { listener = fn; } }, onStartup: { addListener() {} }, onInstalled: { addListener() {} } },
       tabs: { get: async id => ({ id, url: 'https://chatgpt.com/c/example' }),
         query: async () => [{ id: 7, url: 'https://chatgpt.com/c/example' }],
         sendMessage: async (id, command) => { delivered.push(command); return { type: 'response_complete', text: 'reply' }; },
@@ -24,7 +24,7 @@ function harness(bound = 7) {
     fetch: async (url, options = {}) => {
       if (url.endsWith('/session')) return { ok: true, json: async () => ({ token }) };
       if (options.headers['X-Yuki-Bridge-Token'] !== token) return { status: 401, ok: false };
-      if (url.endsWith('/commands')) return { ok: true, json: async () => queue.shift() || { type: 'idle' } };
+      if (url.includes('/commands')) return { ok: true, json: async () => queue.shift() || { type: 'idle' } };
       if (url.endsWith('/events')) { events.push(JSON.parse(options.body)); return { ok: true }; }
       return { ok: true, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer };
     }
