@@ -149,12 +149,17 @@ function waitForResponse(id, baseline, commandToken) {
       last = "";
       return;
     }
-    if (current && current !== last) scheduleUpdate(current);
     // ChatGPT may stream into a reused AX/DOM message node instead of adding
     // a new node. Text changing after the pre-send baseline is still a new
     // assistant turn and must be returned to Yuki.
     const isNewTurn = turns.length > baseline.length || (current && current !== baselineLast);
-    if (current && isNewTurn) {
+    // Never emit the pre-send last assistant turn. On a follow-up message it
+    // is still the last DOM node while the new response is being created; the
+    // old implementation mirrored it as the new reply and could keep
+    // resubmitting stale text as the DOM changed.
+    if (!isNewTurn) return;
+    if (current && current !== last) scheduleUpdate(current);
+    if (current) {
       if (!announced) announced = true;
       clearTimeout(settledTimer);
       if (isGenerating()) return;

@@ -17,6 +17,6 @@ This folder is the shared extension for macOS and Windows. It works in Google Ch
 Choose a running app in Yuki Settings. On Mac, allow the installed Yuki app under System Settings → Privacy & Security → Screen Recording, then restart Yuki if requested. Keep the selected app's window visible. Click Yuki's eye button before sending a visual question. Selecting an app alone does not continuously capture it; Automatic Look is optional.
 
 ## Update or reconnect
-Replace this folder with the new version, click Reload on Yuki's card at `chrome://extensions`, refresh your ChatGPT tab, and bind it again. Close older copies of Yuki before starting an updated app. The extension automatically renews its bridge token after Yuki restarts.
+Replace this folder with the new version, click Reload on Yuki's card at `chrome://extensions`, refresh your ChatGPT tab, and bind it again. Close older copies of Yuki before starting an updated app. Chrome and Edge do not allow an unpacked extension loaded from a local folder or GitHub to silently update itself; this Reload step is required for development builds. Automatic browser-managed updates become possible after publishing the signed extension through the Chrome Web Store (and Edge Add-ons for an Edge-specific listing). The extension automatically renews its bridge token after Yuki restarts.
 
 If binding fails, confirm you clicked the extension from a ChatGPT tab in Chrome, not from a preview of popup.html. If Chrome restarts or the bound tab closes, bind the desired tab again. No API key is required.
