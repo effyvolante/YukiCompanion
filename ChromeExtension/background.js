@@ -79,7 +79,10 @@ async function poll() {
   polling = true;
   try {
     await bindingReady;
-    const response = await bridgeFetch("/commands", { cache: "no-store" });
+    // Keep one authenticated request open briefly. Chrome may suspend ordinary
+    // service-worker timers while its window is minimized; the long-poll lets
+    // the bridge wake the extension as soon as a queued message arrives.
+    const response = await bridgeFetch("/commands?wait=25", { cache: "no-store" });
     if (!response.ok) throw new Error("Bridge unavailable");
     const command = await response.json();
     if (command.type === "reconnect") { await reconnectStoredBinding(); return; }
@@ -132,6 +135,8 @@ async function bridgeFetch(path, options = {}) {
 function postEvent(event) { return bridgeFetch("/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(event) }).catch(() => {}); }
 chrome.alarms.create("yukiPoll", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === "yukiPoll") { reportBindingState(); poll(); } });
+chrome.runtime.onStartup.addListener(() => { reconnectStoredBinding(); poll(); });
+chrome.runtime.onInstalled.addListener(() => { poll(); });
 setInterval(poll, 150);
 setInterval(reportBindingState, 5000);
 poll();

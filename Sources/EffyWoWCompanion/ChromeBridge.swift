@@ -7,6 +7,7 @@ final class ChromeBridge {
     private let port: NWEndpoint.Port = 39173
     private var listener: NWListener?
     private var commands: [QueuedCommand] = []
+    private var commandWaiters: [(connection: NWConnection, deadline: Date)] = []
     private var contexts: [String: Data] = [:]
     private var pending: [String: Pending] = [:]
     private let sessionToken = UUID().uuidString.replacingOccurrences(of: "-", with: "")
@@ -77,6 +78,7 @@ final class ChromeBridge {
                 var command = ["type": "send_message", "id": id, "text": text, "token": self.sessionToken]
                 if let imageData { self.contexts[id] = imageData; command["contextID"] = id }
                 self.commands.append(QueuedCommand(payload: command, messageID: id))
+                self.drainCommandWaiters()
                 await self.monitorTimeout(for: id)
             }
         }
@@ -86,6 +88,7 @@ final class ChromeBridge {
         start()
         onConnectionStateChanged?(.connecting)
         commands.append(QueuedCommand(payload: ["type": "reconnect", "token": sessionToken]))
+        drainCommandWaiters()
     }
 
     private func monitorTimeout(for id: String) async {
@@ -161,18 +164,21 @@ final class ChromeBridge {
     private func respond(to connection: NWConnection, request: (method: String, path: String, body: Data, token: String?)) {
         if request.method == "OPTIONS" { write(connection, status: "204 No Content", body: Data()); return }
         if request.method == "GET" && request.path == "/session" { writeJSON(connection, ["token": sessionToken]); return }
-        let protected = request.path == "/commands" || request.path == "/events" || request.path.hasPrefix("/context/")
+        let protected = request.path.hasPrefix("/commands") || request.path == "/events" || request.path.hasPrefix("/context/")
         guard !protected || request.token == sessionToken else { writeJSON(connection, ["error": "unauthorized"], status: "401 Unauthorized"); return }
-        if request.method == "GET" && request.path == "/commands" {
-            let now = Date()
-            guard let index = commands.firstIndex(where: { $0.leasedAt == nil || now.timeIntervalSince($0.leasedAt!) >= 10 }) else {
-                writeJSON(connection, ["type": "idle"]); return
+        if request.method == "GET" && request.path.hasPrefix("/commands") {
+            if !respondWithNextCommand(to: connection) {
+                let wait = min(max(commandWaitSeconds(from: request.path), 0), 25)
+                if wait == 0 { writeJSON(connection, ["type": "idle"]) }
+                else {
+                    commandWaiters.append((connection, Date().addingTimeInterval(wait)))
+                    Task { @MainActor [weak self] in
+                        try? await Task.sleep(for: .seconds(wait + 1))
+                        self?.drainExpiredCommandWaiters()
+                    }
+                }
             }
-            let queued = commands[index]
-            queued.leasedAt = now
-            let command = queued.payload
-            if queued.messageID == nil { commands.remove(at: index) }
-            writeJSON(connection, command); return
+            return
         }
         if request.method == "GET", request.path.hasPrefix("/context/") {
             let id = String(request.path.dropFirst("/context/".count))
@@ -184,6 +190,48 @@ final class ChromeBridge {
             writeJSON(connection, ["ok": true]); return
         }
         write(connection, status: "404 Not Found", body: Data("not found".utf8))
+    }
+
+    private func commandWaitSeconds(from path: String) -> TimeInterval {
+        guard let question = path.firstIndex(of: "?") else { return 0 }
+        let query = path[path.index(after: question)...]
+        for pair in query.split(separator: "&") {
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            if parts.first == "wait", let value = parts.last, let seconds = Double(value) { return seconds }
+        }
+        return 0
+    }
+
+    private func respondWithNextCommand(to connection: NWConnection) -> Bool {
+        let now = Date()
+        guard let index = commands.firstIndex(where: { $0.leasedAt == nil || now.timeIntervalSince($0.leasedAt!) >= 10 }) else { return false }
+        let queued = commands[index]
+        queued.leasedAt = now
+        let command = queued.payload
+        if queued.messageID == nil { commands.remove(at: index) }
+        writeJSON(connection, command)
+        return true
+    }
+
+    private func drainCommandWaiters() {
+        guard !commandWaiters.isEmpty else { return }
+        var remaining: [(connection: NWConnection, deadline: Date)] = []
+        for waiter in commandWaiters {
+            if respondWithNextCommand(to: waiter.connection) { continue }
+            remaining.append(waiter)
+        }
+        commandWaiters = remaining
+    }
+
+    private func drainExpiredCommandWaiters() {
+        let now = Date()
+        var remaining: [(connection: NWConnection, deadline: Date)] = []
+        for waiter in commandWaiters {
+            if respondWithNextCommand(to: waiter.connection) { continue }
+            if waiter.deadline <= now { writeJSON(waiter.connection, ["type": "idle"]) }
+            else { remaining.append(waiter) }
+        }
+        commandWaiters = remaining
     }
 
     private func handleEvent(_ object: [String: Any]) {
